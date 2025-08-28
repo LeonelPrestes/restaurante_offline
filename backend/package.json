@@ -1,0 +1,34 @@
+{
+  "name": "restaurante-offline-backend",
+  "version": "1.0.0",
+  "description": "Sistema offline para restaurante com impressão térmica",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup-printer": "node ../printer/setup-printer.js"
+  },
+  "keywords": [
+    "restaurante",
+    "offline",
+    "impressora-termica",
+    "bematech",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@serialport/list": "^13.0.0",
+    "@serialport/stream": "^13.0.0",
+    "cors": "^2.8.5",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-serialport": "^3.0.0-alpha.4",
+    "escpos-usb": "^3.0.0-alpha.4",
+    "express": "^4.18.2",
+    "iconv-lite": "^0.6.3",
+    "serialport": "^13.0.0",
+    "socket.io": "^4.7.5",
+    "sqlite3": "^5.1.6"
+  }
+}

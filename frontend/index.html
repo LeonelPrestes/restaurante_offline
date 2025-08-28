@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Restaurante - Garçom</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🍽️ Sistema Restaurante</h1>
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-indicator offline"></span>
+                    <span class="status-text">Conectando...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Mesa Selection -->
+            <section class="mesa-section">
+                <h2>Selecionar Mesa</h2>
+                <div class="mesa-grid">
+                    <button class="mesa-btn" data-mesa="100">Entrega</button>
+                    <button class="mesa-btn" data-mesa="1">Mesa 1</button>
+                    <button class="mesa-btn" data-mesa="2">Mesa 2</button>
+                    <button class="mesa-btn" data-mesa="3">Mesa 3</button>
+                    <button class="mesa-btn" data-mesa="4">Mesa 4</button>
+                    <button class="mesa-btn" data-mesa="5">Mesa 5</button>
+                    <button class="mesa-btn" data-mesa="6">Mesa 6</button>
+                    <button class="mesa-btn" data-mesa="7">Mesa 7</button>
+                    <button class="mesa-btn" data-mesa="8">Mesa 8</button>
+                    <button class="mesa-btn" data-mesa="9">Mesa 9</button>
+                    <button class="mesa-btn" data-mesa="10">Mesa 10</button>
+                    <button class="mesa-btn" data-mesa="11">Mesa 11</button>
+                    <button class="mesa-btn" data-mesa="12">Mesa 12</button>
+                    <button class="mesa-btn" data-mesa="13">Mesa 13</button>
+                    <button class="mesa-btn" data-mesa="14">Mesa 14</button>
+                    <button class="mesa-btn" data-mesa="15">Mesa 15</button>
+                    <button class="mesa-btn" data-mesa="16">Mesa 16</button>
+                    <button class="mesa-btn" data-mesa="17">Mesa 17</button>
+                    <button class="mesa-btn" data-mesa="18">Mesa 18</button>
+                    <button class="mesa-btn" data-mesa="19">Mesa 19</button>
+                    <button class="mesa-btn" data-mesa="20">Mesa 20</button>
+                    <button class="mesa-btn" data-mesa="21">Mesa 21</button>
+                    <button class="mesa-btn" data-mesa="22">Mesa 22</button>
+                    <button class="mesa-btn" data-mesa="23">Mesa 23</button>
+                    <button class="mesa-btn" data-mesa="24">Mesa 24</button>
+                    <button class="mesa-btn" data-mesa="25">Mesa 25</button>
+                </div>
+                <div class="mesa-selected" id="mesaSelected" style="display: none;">
+                    <span>Mesa selecionada: <strong id="mesaNumber"></strong></span>
+                    <button class="btn-secondary" onclick="clearMesa()">Trocar Mesa</button>
+                </div>
+            </section>
+
+            <!-- Menu Items -->
+            <section class="menu-section" id="menuSection" style="display: none;">
+                <h2>Cardápio</h2>
+                <div class="menu-categories" id="menuCategories"></div>
+                <div class="menu-items" id="menuItems"></div>
+            </section>
+
+            <!-- Pedido Atual -->
+            <section class="pedido-section" id="pedidoSection" style="display: none;">
+                <h2>Pedido Atual</h2>
+                <div class="pedido-items" id="pedidoItems"></div>
+                <div class="pedido-total">
+                    <strong>Total: R$ <span id="pedidoTotal">0,00</span></strong>
+                </div>
+                <div class="observacoes-section">
+                    <label for="observacoes">Observações:</label>
+                    <textarea id="observacoes" placeholder="Observações especiais do pedido..."></textarea>
+                </div>
+                <div class="pedido-actions">
+                    <button class="btn-secondary" onclick="clearPedido()">Limpar Pedido</button>
+                    <button class="btn-primary" onclick="enviarPedido()">Enviar para Cozinha</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Enviando pedido...</p>
+        </div>
+
+        <!-- Success Modal -->
+        <div class="modal" id="successModal" style="display: none;">
+            <div class="modal-content">
+                <h3>✅ Pedido Enviado!</h3>
+                <p>O pedido foi enviado para a cozinha com sucesso.</p>
+                <button class="btn-primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+
+        <!-- Error Modal -->
+        <div class="modal" id="errorModal" style="display: none;">
+            <div class="modal-content">
+                <h3>❌ Erro</h3>
+                <p id="errorMessage">Ocorreu um erro ao enviar o pedido.</p>
+                <button class="btn-primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+
