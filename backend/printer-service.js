@@ -3,34 +3,108 @@ const iconv = require('iconv-lite');
 const os = require('os');
 
 class PrinterService {
-  constructor(portaSerial = 'COM6', baudRate = 9600) {
+  constructor(portaSerial = null, baudRate = 9600) {
     this.portaSerial = portaSerial;
     this.baudRate = baudRate;
     this.porta = null;
   }
 
-  async conectar() {
-    if (!this.portaSerial) {
-      throw new Error('Nenhuma porta serial definida para a impressora');
+  // 🧩 Detecta automaticamente a primeira impressora serial disponível
+// 🧩 Detecta automaticamente uma impressora serial conectada
+async detectarPorta() {
+  const portas = await SerialPort.list();
+
+  if (!portas || portas.length === 0) {
+    throw new Error('Nenhuma porta serial foi detectada no sistema.');
+  }
+
+  // 👇 Adicione este trecho para listar tudo no console
+  console.log('🔎 Portas detectadas:');
+  portas.forEach(p => {
+    console.log(`- ${p.path} | ${p.manufacturer || 'Desconhecido'} | ${p.friendlyName || 'Sem nome'} | Serial: ${p.serialNumber || 'N/A'}`);
+  });
+
+  // 🔍 Filtra apenas portas que parecem estar realmente conectadas
+  const portasValidas = portas.filter(p =>
+    p.serialNumber && p.serialNumber !== 'N/A' && p.serialNumber.trim() !== ''
+  );
+
+  if (portasValidas.length === 0) {
+    throw new Error('Nenhuma impressora conectada foi encontrada (todas as portas estão vazias).');
+  }
+
+  // 🖨️ Procura impressoras conhecidas
+  const impressora = portasValidas.find(p =>
+    /(bematech|elgin|daruma|epson|pos|printer)/i.test(
+      `${p.manufacturer || ''} ${p.friendlyName || ''}`
+    )
+  );
+
+  if (impressora) {
+    console.log(`🖨️ Impressora detectada: ${impressora.friendlyName} (${impressora.path})`);
+    return impressora.path;
+  }
+
+  const primeira = portasValidas[0];
+  console.warn(`⚠️ Nenhuma impressora reconhecida. Usando a porta ${primeira.path}`);
+  return primeira.path;
+}
+
+
+  // 🔍 Lista todas as portas seriais disponíveis no sistema
+async listarPortas() {
+  try {
+    const portas = await SerialPort.list();
+
+    if (!portas || portas.length === 0) {
+      console.warn('Nenhuma porta serial encontrada.');
+      return [];
     }
 
-    this.porta = new SerialPort({
-      path: this.portaSerial,
-      baudRate: this.baudRate,
-      autoOpen: false
-    });
+    // Simplifica o retorno, mostrando apenas informações úteis
+    const listaFormatada = portas.map(p => ({
+      path: p.path,
+      manufacturer: p.manufacturer || 'Desconhecido',
+      friendlyName: p.friendlyName || 'Sem nome',
+      serialNumber: p.serialNumber || 'N/A'
+    }));
 
-    return new Promise((resolve, reject) => {
-      this.porta.open((err) => {
-        if (err) {
-          console.error('Erro ao abrir porta serial:', err.message);
-          reject(err);
-        } else {
-          console.log(`Conectado à impressora na porta ${this.portaSerial}`);
-          resolve();
-        }
+    console.log('🔎 Portas seriais detectadas:', listaFormatada);
+    return listaFormatada;
+  } catch (error) {
+    console.error('Erro ao listar portas seriais:', error.message);
+    throw error;
+  }
+}
+
+  // 🔧 Conecta à impressora (automática se porta não definida)
+  async conectar() {
+    try {
+      if (!this.portaSerial) {
+        this.portaSerial = await this.detectarPorta();
+      }
+
+      this.porta = new SerialPort({
+        path: this.portaSerial,
+        baudRate: this.baudRate,
+        autoOpen: false
       });
-    });
+
+      await new Promise((resolve, reject) => {
+        this.porta.open((err) => {
+          if (err) {
+            console.error('Erro ao abrir porta serial:', err.message);
+            reject(err);
+          } else {
+            console.log(`✅ Conectado à impressora na porta ${this.portaSerial}`);
+            resolve();
+          }
+        });
+      });
+    } catch (err) {
+      console.error('❌ Erro ao conectar à impressora:', err.message);
+      throw err;
+    }
   }
 
   getStatus() {
@@ -40,102 +114,76 @@ class PrinterService {
     };
   }
 
-  // Função auxiliar: remove caracteres de controle indesejados (exceto tab/newline)
   sanitizeForPrint(text) {
     if (!text) return '';
     return String(text).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').trim();
   }
 
-formatarPedido(pedido) {
-  const linhas = [];
-  const adicionar = (linha) => {
-    linhas.push(linha);
-    linhas.push(''); // linha em branco para espaçamento
-  };
+  formatarPedido(pedido) {
+    const linhas = [];
+    const add = (linha) => {
+      linhas.push(linha);
+      linhas.push('');
+    };
 
-  adicionar('===== PEDIDO RECEBIDO =====');
-  adicionar(`Pedido N: ${pedido.id}`);
-  adicionar(`Mesa: ${pedido.mesa}`);
-  adicionar(`Status: ${pedido.status}`);
-  adicionar(`Data:${new Date().toLocaleString('pt-BR')}`);
-  adicionar('-------------------------');
-  adicionar('Itens:');
+    add('===== PEDIDO RECEBIDO =====');
+    add(`Pedido Nº: ${pedido.id}`);
+    add(`Mesa: ${pedido.mesa}`);
+    add(`Status: ${pedido.status}`);
+    add(`Data: ${new Date().toLocaleString('pt-BR')}`);
+    add('-------------------------');
+    add('Itens:');
 
-  (pedido.itens || []).forEach(item => {
-    const nome = item.nome || 'Item';
-    const qtd = item.quantidade || 1;
-    adicionar(
-      `-------------------------${qtd}x ${nome}`
-      );
+    (pedido.itens || []).forEach(item => {
+      const nome = item.nome || 'Item';
+      const qtd = item.quantidade || 1;
+      add(`- ${qtd}x ${nome}`);
 
-    // Itens adicionados
-    if (item.adicionar && item.adicionar.length > 0) {
-      item.adicionar.forEach(ad => {
-        adicionar(`   + Adicionar: ${this.sanitizeForPrint(ad)}`);
-      });
-    }
-
-    // Itens retirados
-    if (item.retirar && item.retirar.length > 0) {
-      item.retirar.forEach(rt => {
-        adicionar(`   - Retirar: ${this.sanitizeForPrint(rt)}`);
-      });
-    }
-
-    // Observação individual
-    if (item.observacao && String(item.observacao).trim() !== '') {
-      item.observacao.split(/\r?\n/).forEach(linha => {
-        adicionar(`   Obs: ${this.sanitizeForPrint(linha)}`);
-      });
-    }
-  });
-
-  // Observações gerais do pedido
-  if (pedido.observacoes && pedido.observacoes.trim() !== '') {
-    adicionar('-------------------------');
-    adicionar('Obs:');
-    pedido.observacoes.split(/\r?\n/).forEach(linha => {
-      adicionar(this.sanitizeForPrint(linha));
+      if (item.adicionar?.length) {
+        item.adicionar.forEach(ad => add(`   + ${this.sanitizeForPrint(ad)}`));
+      }
+      if (item.retirar?.length) {
+        item.retirar.forEach(rt => add(`   - ${this.sanitizeForPrint(rt)}`));
+      }
+      if (item.observacao?.trim()) {
+        item.observacao.split(/\r?\n/).forEach(linha => add(`   Obs: ${this.sanitizeForPrint(linha)}`));
+      }
     });
+
+    if (pedido.observacoes?.trim()) {
+      add('-------------------------');
+      add('Obs Gerais:');
+      pedido.observacoes.split(/\r?\n/).forEach(linha => add(this.sanitizeForPrint(linha)));
+    }
+
+    add('=========================');
+    add(' ');
+    return linhas.join(os.EOL);
   }
-
-  adicionar('=========================');
-  adicionar(' '); // linha final
-
-  return linhas.join(os.EOL);
-}
-
-
 
   async imprimirTexto(texto) {
     if (!this.porta || !this.porta.isOpen) {
       throw new Error('Porta serial não está aberta.');
     }
 
-    // Comandos ESC/Bematech
-    const CUT_PAPER = Buffer.from([0x1B, 0x6D]); // Corte total
-    const AUMENTAR_FONTE = Buffer.from([0x1B, 0x57, 0x01]); // Fonte expandida
+    const CUT_PAPER = Buffer.from([0x1B, 0x6D]);
+    const AUMENTAR_FONTE = Buffer.from([0x1B, 0x57, 0x01]);
 
     return new Promise((resolve, reject) => {
       try {
         const textoCodificado = iconv.encode(texto + os.EOL.repeat(4), 'win1252');
-
-        const bufferFinal = Buffer.concat([
-          AUMENTAR_FONTE,
-          textoCodificado,
-          CUT_PAPER
-        ]);
+        const bufferFinal = Buffer.concat([AUMENTAR_FONTE, textoCodificado, CUT_PAPER]);
 
         this.porta.write(bufferFinal, (err) => {
           if (err) {
             console.error('Erro ao imprimir texto:', err.message);
-            return reject(err);
+            reject(err);
+          } else {
+            this.porta.drain(() => {
+              console.log('🖨️ Impressão concluída com sucesso.');
+              resolve();
+            });
           }
-
-          this.porta.drain(() => {
-            console.log('Texto com fonte aumentada enviado com sucesso.');
-            resolve();
-          });
         });
       } catch (erro) {
         console.error('Erro geral na impressão:', erro.message);
@@ -146,10 +194,9 @@ formatarPedido(pedido) {
 
   async imprimirPedido(pedido) {
     if (!this.porta || !this.porta.isOpen) {
-      console.log('Tentando conectar à impressora antes de imprimir...');
+      console.log('Tentando detectar e conectar automaticamente...');
       await this.conectar();
     }
-
     const texto = this.formatarPedido(pedido);
     await this.imprimirTexto(texto);
   }
@@ -160,12 +207,10 @@ formatarPedido(pedido) {
       'Sistema Restaurante Offline',
       `Data: ${new Date().toLocaleString()}`,
       '---------------------------',
-      'Este é um teste de impressão.',
       'Se você está lendo isso, está tudo funcionando :)',
       '===========================',
       ' '
     ].join(os.EOL);
-
     await this.imprimirTexto(texto);
   }
 
@@ -177,7 +222,7 @@ formatarPedido(pedido) {
             console.error('Erro ao fechar porta:', err.message);
             reject(err);
           } else {
-            console.log('Porta serial fechada.');
+            console.log('🔌 Porta serial fechada.');
             resolve();
           }
         });

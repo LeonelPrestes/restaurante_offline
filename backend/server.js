@@ -329,6 +329,19 @@ app.post('/api/printer/test', async (req, res) => {
   }
 });
 
+// =========================================================
+// GET /api/printer/list -> Lista todas as portas seriais detectadas
+// =========================================================
+app.get('/api/printer/list', async (req, res) => {
+  try {
+    const portas = await printerService.listarPortas();
+    res.json({ success: true, portas });
+  } catch (error) {
+    console.error('Erro ao listar portas seriais:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.post('/api/printer/connect', async (req, res) => {
   try {
     if (typeof printerService.detectAndConnect === 'function') {
