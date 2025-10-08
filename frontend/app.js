@@ -536,7 +536,7 @@ async function enviarPedido() {
     const observacoes = document.getElementById('observacoes') ? document.getElementById('observacoes').value.trim() : '';
     
     const pedidoData = {
-        mesa: parseInt(mesaSelecionada),
+        mesa: mesaSelecionada,
         itens: pedidoAtual,
         observacoes: observacoes
     };

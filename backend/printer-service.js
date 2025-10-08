@@ -126,13 +126,11 @@ async listarPortas() {
       linhas.push('');
     };
 
-    add('===== PEDIDO RECEBIDO =====');
-    add(`Pedido Nº: ${pedido.id}`);
-    add(`Mesa: ${pedido.mesa}`);
-    add(`Status: ${pedido.status}`);
-    add(`Data: ${new Date().toLocaleString('pt-BR')}`);
+    add('==== PEDIDO RECEBIDO ====');
+    add(`Pedido N: ${pedido.id}`);
+    add(`Data:${new Date().toLocaleString('pt-BR')}`);
     add('-------------------------');
-    add('Itens:');
+    add(`Mesa: ${pedido.mesa}`);
 
     (pedido.itens || []).forEach(item => {
       const nome = item.nome || 'Item';
