@@ -3,7 +3,7 @@ let socket;
 let mesaSelecionada = null;
 let menuItems = [];
 let pedidoAtual = []; // itens terão: uid, id, nome, preco, quantidade, observacao, adicionar[], retirar[]
-let categoriaAtiva = 'Todos';
+let categoriaAtiva = 'Executivos'; // categoria inicial
 
 // extras globais e customização temporária por item
 let extrasGlobal = []; // array de strings (ovo, omelete, bifes, etc)

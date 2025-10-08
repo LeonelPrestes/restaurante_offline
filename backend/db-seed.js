@@ -104,6 +104,7 @@ db.serialize(() => {
   // EXECUTIVOS
   // ---------------------------------------------------------
   const executivos = [
+    { nome: 'Prato do Dia', preco: 22.90 },
     { nome: 'Frango Grelhado', preco: 24.90 },
     { nome: 'Frango à Milanesa', preco: 26.90 },
     { nome: 'Frango à Parmegiana', preco: 28.90 },

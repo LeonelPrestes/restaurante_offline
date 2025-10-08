@@ -3,7 +3,7 @@ const iconv = require('iconv-lite');
 const os = require('os');
 
 class PrinterService {
-  constructor(portaSerial = 'COM4', baudRate = 9600) {
+  constructor(portaSerial = 'COM6', baudRate = 9600) {
     this.portaSerial = portaSerial;
     this.baudRate = baudRate;
     this.porta = null;
