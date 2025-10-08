@@ -87,9 +87,9 @@ class Database {
 
   async insertSampleMenuItems() {
     const sampleItems = [
-      { nome: 'Prato do Dia', preco: 21.90, categoria: 'Almoço' },
-      { nome: 'Executivo de Boi', preco: 29.90, categoria: 'Almoço' },
-      { nome: 'Executivo de Frango', preco: 23.90, categoria: 'Almoço' },
+      { nome: 'Prato do Dia', preco: 22.90, categoria: 'Almoço' },
+      { nome: 'Feijoada', preco: 24.90, categoria: 'Almoço' },
+      { nome: 'Frango Grelhado', preco: 23.90, categoria: 'Almoço' },
       { nome: 'Executivo de Porco', preco: 23.90, categoria: 'Almoço' },
       { nome: 'Refrigerante Lata', preco: 5.00, categoria: 'Bebidas' },
       { nome: 'Suco DelVale', preco: 5.00, categoria: 'Bebidas' },

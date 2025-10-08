@@ -40,6 +40,12 @@ class PrinterService {
     };
   }
 
+  // Função auxiliar: remove caracteres de controle indesejados (exceto tab/newline)
+  sanitizeForPrint(text) {
+    if (!text) return '';
+    return String(text).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').trim();
+  }
+
 formatarPedido(pedido) {
   const linhas = [];
   const adicionar = (linha) => {
@@ -48,30 +54,58 @@ formatarPedido(pedido) {
   };
 
   adicionar('===== PEDIDO RECEBIDO =====');
-  adicionar(`Pedido nº: ${pedido.id}`);
+  adicionar(`Pedido N: ${pedido.id}`);
   adicionar(`Mesa: ${pedido.mesa}`);
   adicionar(`Status: ${pedido.status}`);
-  adicionar(`Data: ${new Date().toLocaleString('pt-BR')}`);
-  adicionar('---------------------------');
+  adicionar(`Data:${new Date().toLocaleString('pt-BR')}`);
+  adicionar('-------------------------');
   adicionar('Itens:');
 
-  pedido.itens.forEach(item => {
+  (pedido.itens || []).forEach(item => {
     const nome = item.nome || 'Item';
     const qtd = item.quantidade || 1;
-    adicionar(`- ${qtd}x ${nome}`);
+    adicionar(
+      `-------------------------${qtd}x ${nome}`
+      );
+
+    // Itens adicionados
+    if (item.adicionar && item.adicionar.length > 0) {
+      item.adicionar.forEach(ad => {
+        adicionar(`   + Adicionar: ${this.sanitizeForPrint(ad)}`);
+      });
+    }
+
+    // Itens retirados
+    if (item.retirar && item.retirar.length > 0) {
+      item.retirar.forEach(rt => {
+        adicionar(`   - Retirar: ${this.sanitizeForPrint(rt)}`);
+      });
+    }
+
+    // Observação individual
+    if (item.observacao && String(item.observacao).trim() !== '') {
+      item.observacao.split(/\r?\n/).forEach(linha => {
+        adicionar(`   Obs: ${this.sanitizeForPrint(linha)}`);
+      });
+    }
   });
 
+  // Observações gerais do pedido
   if (pedido.observacoes && pedido.observacoes.trim() !== '') {
-    adicionar('---------------------------');
+    adicionar('-------------------------');
     adicionar('Obs:');
-    adicionar(pedido.observacoes);
+    pedido.observacoes.split(/\r?\n/).forEach(linha => {
+      adicionar(this.sanitizeForPrint(linha));
+    });
   }
 
-  adicionar('===========================');
+  adicionar('=========================');
   adicionar(' '); // linha final
 
   return linhas.join(os.EOL);
 }
+
+
 
   async imprimirTexto(texto) {
     if (!this.porta || !this.porta.isOpen) {
@@ -79,9 +113,8 @@ formatarPedido(pedido) {
     }
 
     // Comandos ESC/Bematech
-    const CUT_PAPER = Buffer.from([0x1B, 0x6D]); // Corte total (Bematech)
-    const AUMENTAR_FONTE = Buffer.from([0x1B, 0x57, 0x01]); // Fonte expandida: largura + altura
-    // const NORMAL_FONTE = Buffer.from([0x1B, 0x57, 0x00]); // Resetar fonte, se necessário
+    const CUT_PAPER = Buffer.from([0x1B, 0x6D]); // Corte total
+    const AUMENTAR_FONTE = Buffer.from([0x1B, 0x57, 0x01]); // Fonte expandida
 
     return new Promise((resolve, reject) => {
       try {

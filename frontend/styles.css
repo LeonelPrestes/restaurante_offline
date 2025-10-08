@@ -496,3 +496,92 @@ section h2 {
     }
 }
 
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal.hidden { display: none; }
+  .modal-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .modal-content textarea {
+    resize: none;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+  .botoes-modal {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  /* ---------- Custom modal controls (Retirar / Adicionar) ---------- */
+.accordion-btn {
+    background: linear-gradient(135deg, #4299e1, #3182ce);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+
+.accordion-content {
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.option-btn {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+}
+
+.option-btn:hover {
+  background: #edf2f7;
+}
+
+.option-selected {
+  background: linear-gradient(135deg, #48bb78, #38a169);
+  color: white;
+  border-color: rgba(72,187,120,0.4);
+}
+
+.selected-list {
+  font-size: 0.9rem;
+  color: #4a5568;
+  margin-top: 0.25rem;
+}
+
+.already-in-pedido {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e2e8f0;
+}
