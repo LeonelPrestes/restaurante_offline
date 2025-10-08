@@ -10,72 +10,72 @@ class PrinterService {
   }
 
   // 🧩 Detecta automaticamente a primeira impressora serial disponível
-// 🧩 Detecta automaticamente uma impressora serial conectada
-async detectarPorta() {
-  const portas = await SerialPort.list();
-
-  if (!portas || portas.length === 0) {
-    throw new Error('Nenhuma porta serial foi detectada no sistema.');
-  }
-
-  // 👇 Adicione este trecho para listar tudo no console
-  console.log('🔎 Portas detectadas:');
-  portas.forEach(p => {
-    console.log(`- ${p.path} | ${p.manufacturer || 'Desconhecido'} | ${p.friendlyName || 'Sem nome'} | Serial: ${p.serialNumber || 'N/A'}`);
-  });
-
-  // 🔍 Filtra apenas portas que parecem estar realmente conectadas
-  const portasValidas = portas.filter(p =>
-    p.serialNumber && p.serialNumber !== 'N/A' && p.serialNumber.trim() !== ''
-  );
-
-  if (portasValidas.length === 0) {
-    throw new Error('Nenhuma impressora conectada foi encontrada (todas as portas estão vazias).');
-  }
-
-  // 🖨️ Procura impressoras conhecidas
-  const impressora = portasValidas.find(p =>
-    /(bematech|elgin|daruma|epson|pos|printer)/i.test(
-      `${p.manufacturer || ''} ${p.friendlyName || ''}`
-    )
-  );
-
-  if (impressora) {
-    console.log(`🖨️ Impressora detectada: ${impressora.friendlyName} (${impressora.path})`);
-    return impressora.path;
-  }
-
-  const primeira = portasValidas[0];
-  console.warn(`⚠️ Nenhuma impressora reconhecida. Usando a porta ${primeira.path}`);
-  return primeira.path;
-}
-
-
-  // 🔍 Lista todas as portas seriais disponíveis no sistema
-async listarPortas() {
-  try {
+  // 🧩 Detecta automaticamente uma impressora serial conectada
+  async detectarPorta() {
     const portas = await SerialPort.list();
 
     if (!portas || portas.length === 0) {
-      console.warn('Nenhuma porta serial encontrada.');
-      return [];
+      throw new Error('Nenhuma porta serial foi detectada no sistema.');
     }
 
-    // Simplifica o retorno, mostrando apenas informações úteis
-    const listaFormatada = portas.map(p => ({
-      path: p.path,
-      manufacturer: p.manufacturer || 'Desconhecido',
-      friendlyName: p.friendlyName || 'Sem nome',
-      serialNumber: p.serialNumber || 'N/A'
-    }));
+    // 👇 Adicione este trecho para listar tudo no console
+    console.log('🔎 Portas detectadas:');
+    portas.forEach(p => {
+      console.log(`- ${p.path} | ${p.manufacturer || 'Desconhecido'} | ${p.friendlyName || 'Sem nome'} | Serial: ${p.serialNumber || 'N/A'}`);
+    });
 
-    console.log('🔎 Portas seriais detectadas:', listaFormatada);
-    return listaFormatada;
-  } catch (error) {
-    console.error('Erro ao listar portas seriais:', error.message);
-    throw error;
+    // 🔍 Filtra apenas portas que parecem estar realmente conectadas
+    const portasValidas = portas.filter(p =>
+      p.serialNumber && p.serialNumber !== 'N/A' && p.serialNumber.trim() !== ''
+    );
+
+    if (portasValidas.length === 0) {
+      throw new Error('Nenhuma impressora conectada foi encontrada (todas as portas estão vazias).');
+    }
+
+    // 🖨️ Procura impressoras conhecidas
+    const impressora = portasValidas.find(p =>
+      /(bematech|elgin|daruma|epson|pos|printer)/i.test(
+        `${p.manufacturer || ''} ${p.friendlyName || ''}`
+      )
+    );
+
+    if (impressora) {
+      console.log(`🖨️ Impressora detectada: ${impressora.friendlyName} (${impressora.path})`);
+      return impressora.path;
+    }
+
+    const primeira = portasValidas[0];
+    console.warn(`⚠️ Nenhuma impressora reconhecida. Usando a porta ${primeira.path}`);
+    return primeira.path;
   }
-}
+
+
+  // 🔍 Lista todas as portas seriais disponíveis no sistema
+  async listarPortas() {
+    try {
+      const portas = await SerialPort.list();
+
+      if (!portas || portas.length === 0) {
+        console.warn('Nenhuma porta serial encontrada.');
+        return [];
+      }
+
+      // Simplifica o retorno, mostrando apenas informações úteis
+      const listaFormatada = portas.map(p => ({
+        path: p.path,
+        manufacturer: p.manufacturer || 'Desconhecido',
+        friendlyName: p.friendlyName || 'Sem nome',
+        serialNumber: p.serialNumber || 'N/A'
+      }));
+
+      console.log('🔎 Portas seriais detectadas:', listaFormatada);
+      return listaFormatada;
+    } catch (error) {
+      console.error('Erro ao listar portas seriais:', error.message);
+      throw error;
+    }
+  }
 
   // 🔧 Conecta à impressora (automática se porta não definida)
   async conectar() {
@@ -135,7 +135,20 @@ async listarPortas() {
     (pedido.itens || []).forEach(item => {
       const nome = item.nome || 'Item';
       const qtd = item.quantidade || 1;
-      add(`- ${qtd}x ${nome}`);
+      for (let i = 0; i < qtd; i++) {
+        add(`- ${nome}`);
+        if (item.adicionar?.length) {
+          item.adicionar.forEach(ad => add(`   + ${this.sanitizeForPrint(ad)}`));
+        }
+        if (item.retirar?.length) {
+          item.retirar.forEach(rt => add(`   - ${this.sanitizeForPrint(rt)}`));
+        }
+        if (item.observacao?.trim()) {
+          item.observacao.split(/\r?\n/).forEach(linha => add(`   Obs: ${this.sanitizeForPrint(linha)}`));
+        }
+        add(''); // linha em branco entre os pratos iguais
+      }
+
 
       if (item.adicionar?.length) {
         item.adicionar.forEach(ad => add(`   + ${this.sanitizeForPrint(ad)}`));
