@@ -3,7 +3,7 @@ let socket;
 let mesaSelecionada = null;
 let menuItems = [];
 let pedidoAtual = []; // itens terão: uid, id, nome, preco, quantidade, observacao, adicionar[], retirar[]
-let categoriaAtiva = 'Executivos'; // categoria inicial
+let categoriaAtiva = 'Pratos'; // categoria inicial
 
 // extras globais e customização temporária por item
 let extrasGlobal = []; // array de strings (ovo, omelete, bifes, etc)
@@ -11,11 +11,11 @@ const currentCustomizationByItem = {}; // { [itemId]: { adicionar:[], retirar:[]
 
 // uid temporário usado para diferenciar linhas com mesma id mas observações diferentes
 function generateUid() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initializeSocket();
     loadMenuItems();
     setupEventListeners();
@@ -26,22 +26,22 @@ document.addEventListener('DOMContentLoaded', function() {
 // -----------------------------
 function initializeSocket() {
     socket = io();
-    
-    socket.on('connect', function() {
+
+    socket.on('connect', function () {
         updateConnectionStatus(true);
         console.log('Conectado ao servidor');
     });
-    
-    socket.on('disconnect', function() {
+
+    socket.on('disconnect', function () {
         updateConnectionStatus(false);
         console.log('Desconectado do servidor');
     });
-    
-    socket.on('novo_pedido', function(pedido) {
+
+    socket.on('novo_pedido', function (pedido) {
         console.log('Novo pedido recebido:', pedido);
     });
-    
-    socket.on('pedido_atualizado', function(pedido) {
+
+    socket.on('pedido_atualizado', function (pedido) {
         console.log('Pedido atualizado:', pedido);
     });
 }
@@ -49,7 +49,7 @@ function initializeSocket() {
 function updateConnectionStatus(isConnected) {
     const statusIndicator = document.querySelector('.status-indicator');
     const statusText = document.querySelector('.status-text');
-    
+
     if (isConnected) {
         statusIndicator.className = 'status-indicator online';
         statusText.textContent = 'Online';
@@ -65,7 +65,7 @@ function updateConnectionStatus(isConnected) {
 function setupEventListeners() {
     // Mesa selection
     document.querySelectorAll('.mesa-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             selectMesa(this.dataset.mesa);
         });
     });
@@ -80,43 +80,80 @@ function setupEventListeners() {
         // cancelar fecha modal sem adicionar (descarta customização temporária)
         if (btnCancelar) btnCancelar.addEventListener('click', () => {
             const itemId = modal.dataset.itemId;
+
+            // 🔄 Remove customização temporária para esse item
             if (itemId) {
-                // descarta customização temporária para esse item (não altera pedidos já existentes)
                 delete currentCustomizationByItem[itemId];
             }
-            modal.style.display = 'none';
-            modal.dataset.itemId = '';
+
+            // 🧹 Limpa campo de observação
             if (textarea) textarea.value = '';
-            // limpar a área de customização (opcional)
+
+            // 🧽 Remove seleção visual dos botões
+            const buttons = modal.querySelectorAll('.option-btn.option-selected');
+            buttons.forEach(btn => btn.classList.remove('option-selected'));
+
+            // 🗑️ Limpa conteúdo da área de customização
             const custArea = modal.querySelector('#customizationArea');
             if (custArea) custArea.innerHTML = '';
+
+            // 🚪 Fecha o modal e limpa o ID
+            modal.style.display = 'none';
+            modal.dataset.itemId = '';
         });
 
         // adicionar -> salva item ao pedido com customizações
         if (btnAdicionar) btnAdicionar.addEventListener('click', () => {
             const itemId = modal.dataset.itemId;
             const observacao = textarea ? textarea.value.trim() : '';
+
             if (itemId) {
+                // Recupera a customização atual (ou cria nova limpa)
                 const customization = currentCustomizationByItem[itemId] || { adicionar: [], retirar: [], observacao: '' };
                 customization.observacao = observacao;
-                addToPedidoWithCustomization(parseInt(itemId), customization.observacao, customization.adicionar || [], customization.retirar || []);
-                // opcional: limpar a customização temporária daquele item depois de adicionar
+
+                // Adiciona o item ao pedido
+                addToPedidoWithCustomization(
+                    parseInt(itemId),
+                    customization.observacao,
+                    customization.adicionar || [],
+                    customization.retirar || []
+                );
+
+                // 🔄 Limpa o estado para esse item (impede herança no próximo modal)
                 delete currentCustomizationByItem[itemId];
             }
+
+            // 🧹 Fecha e reseta o modal
             modal.style.display = 'none';
             modal.dataset.itemId = '';
+
             if (textarea) textarea.value = '';
+
             const custArea = modal.querySelector('#customizationArea');
             if (custArea) custArea.innerHTML = '';
         });
+
     }
 
     // Fechar qualquer modal clicando fora (se o overlay tiver a classe 'modal')
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         if (e.target.classList && e.target.classList.contains('modal')) {
-            e.target.style.display = 'none';
+            const modal = e.target;
+            const textarea = modal.querySelector('#textoObservacao');
+
+            // 🧽 Resetar tudo ao fechar clicando fora
+            if (textarea) textarea.value = '';
+            const custArea = modal.querySelector('#customizationArea');
+            if (custArea) custArea.innerHTML = '';
+            const buttons = modal.querySelectorAll('.option-btn.option-selected');
+            buttons.forEach(btn => btn.classList.remove('option-selected'));
+
+            modal.dataset.itemId = '';
+            modal.style.display = 'none';
         }
     });
+
 }
 
 // -----------------------------
@@ -124,35 +161,35 @@ function setupEventListeners() {
 // -----------------------------
 function selectMesa(numeroMesa) {
     mesaSelecionada = numeroMesa;
-    
+
     document.querySelectorAll('.mesa-btn').forEach(btn => {
         btn.classList.remove('selected');
     });
-    
+
     const el = document.querySelector(`[data-mesa="${numeroMesa}"]`);
     if (el) el.classList.add('selected');
-    
+
     const mesaSelectedDiv = document.getElementById('mesaSelected');
     const mesaNumber = document.getElementById('mesaNumber');
-    
+
     if (mesaNumber) mesaNumber.textContent = numeroMesa;
     if (mesaSelectedDiv) mesaSelectedDiv.style.display = 'flex';
-    
+
     const menuSection = document.getElementById('menuSection');
     const pedidoSection = document.getElementById('pedidoSection');
     if (menuSection) menuSection.style.display = 'block';
     if (pedidoSection) pedidoSection.style.display = 'block';
-    
+
     if (menuSection) menuSection.scrollIntoView({ behavior: 'smooth' });
 }
 
 function clearMesa() {
     mesaSelecionada = null;
-    
+
     document.querySelectorAll('.mesa-btn').forEach(btn => {
         btn.classList.remove('selected');
     });
-    
+
     const mesaSelectedDiv = document.getElementById('mesaSelected');
     const menuSection = document.getElementById('menuSection');
     const pedidoSection = document.getElementById('pedidoSection');
@@ -160,7 +197,7 @@ function clearMesa() {
     if (mesaSelectedDiv) mesaSelectedDiv.style.display = 'none';
     if (menuSection) menuSection.style.display = 'none';
     if (pedidoSection) pedidoSection.style.display = 'none';
-    
+
     clearPedido();
 }
 
@@ -171,7 +208,7 @@ async function loadMenuItems() {
     try {
         const response = await fetch('/api/menu');
         if (!response.ok) throw new Error('Erro ao carregar menu');
-        
+
         menuItems = await response.json();
         // construir extras global baseando-se no cardápio
         buildExtrasList();
@@ -193,8 +230,8 @@ function renderMenuCategories() {
     const categoriesContainer = document.getElementById('menuCategories');
     if (!categoriesContainer) return;
     const categories = ['Todos', ...new Set(menuItems.map(item => item.categoria))];
-    
-    categoriesContainer.innerHTML = categories.map(category => 
+
+    categoriesContainer.innerHTML = categories.map(category =>
         `<button class="category-btn ${category === categoriaAtiva ? 'active' : ''}" 
                  onclick="selectCategory('${category}')">${category}</button>`
     ).join('');
@@ -210,11 +247,11 @@ function renderMenuItems() {
     const itemsContainer = document.getElementById('menuItems');
     if (!itemsContainer) return;
 
-    const filteredItems = categoriaAtiva === 'Todos' 
-        ? menuItems 
+    const filteredItems = categoriaAtiva === 'Todos'
+        ? menuItems
         : menuItems.filter(item => item.categoria === categoriaAtiva);
-    
-    itemsContainer.innerHTML = filteredItems.map(item => 
+
+    itemsContainer.innerHTML = filteredItems.map(item =>
         `<div class="menu-item" onclick="openItemModal(${item.id})">
             <div class="menu-item-name">${item.nome}</div>
             <div class="menu-item-category">${item.categoria}</div>
@@ -228,71 +265,70 @@ function renderMenuItems() {
 // -----------------------------
 function openItemModal(itemId) {
     const modal = document.getElementById('modalObservacao');
+    modal.querySelectorAll('.option-btn.option-selected')
+        .forEach(btn => btn.classList.remove('option-selected'));
     const textarea = document.getElementById('textoObservacao');
 
     const item = menuItems.find(i => i.id === itemId);
     if (!item) return;
 
     if (!modal) {
-        // fallback (manter compatibilidade)
+        // fallback (mantém compatibilidade)
         addToPedidoWithCustomization(itemId, '', [], []);
         return;
     }
 
-    // preparar personalização inicial:
-    // - união das customizações já presentes no pedido para esse item (para mostrar "já no pedido")
-    const existentesAdicionar = Array.from(new Set(pedidoAtual
-        .filter(p => p.id === itemId)
-        .flatMap(p => (p.adicionar || []))
-    ));
-    const existentesRetirar = Array.from(new Set(pedidoAtual
-        .filter(p => p.id === itemId)
-        .flatMap(p => (p.retirar || []))
-    ));
-
-    // inicializa currentCustomization com as seleções existentes (usuário verá o que já foi adicionado ao pedido)
+    // 🔄 Inicia sempre limpo (não herda adicionais antigos)
     currentCustomizationByItem[itemId] = {
-        adicionar: [...existentesAdicionar], // pré-seleciona com o que já está no pedido (útil como referência)
-        retirar: [...existentesRetirar],
+        adicionar: [],
+        retirar: [],
         observacao: ''
     };
 
-    // armazenar id no modal para o handler do botão Adicionar/Cancela
+    // 📦 Armazena o ID no modal (para o botão “Adicionar” saber qual item salvar)
     modal.style.display = 'flex';
     modal.dataset.itemId = String(itemId);
 
-    // limpar e preencher área de customização (coloco antes do textarea)
+    // 🧹 Limpa ou cria a área de customização
     let custArea = modal.querySelector('#customizationArea');
     if (!custArea) {
         custArea = document.createElement('div');
         custArea.id = 'customizationArea';
-        // inserir antes do textarea (se houver)
         const modalContent = modal.querySelector('.modal-content');
         const textareaEl = modalContent.querySelector('#textoObservacao');
         modalContent.insertBefore(custArea, textareaEl);
     }
-    renderCustomizationArea(item, custArea);
 
-    // preenche textarea em branco (ou pode vir carregado)
+    // 🧠 Renderiza a área de customização (sem aplicar seleções antigas)
+    renderCustomizationArea(item, custArea, true);
+
+    // ✍️ Limpa o campo de observação
     if (textarea) {
         textarea.value = '';
         textarea.focus();
     }
 }
 
+
 // renderiza a UI interna do modal para customização
-function renderCustomizationArea(item, container) {
+function renderCustomizationArea(item, container, showAlready = false) {
     const itemId = item.id;
     const retirarOptions = Array.isArray(item.ingredientes) && item.ingredientes.length
         ? item.ingredientes
-        : ['Cebola', 'Salada', 'Tomate', 'Alface', 'Feijão', 'Arroz',]; // fallback padrão
+        : ['Cebola', 'Salada', 'Tomate', 'Alface', 'Feijao', 'Arroz']; // fallback simples
 
-    const adicionarOptions = extrasGlobal.slice(); // já construída em loadMenuItems()
-
-    // obter seleção atual temporária
+    const adicionarOptions = extrasGlobal.slice();
     const cur = currentCustomizationByItem[itemId] || { adicionar: [], retirar: [], observacao: '' };
 
-    // montar HTML
+    // ✅ Mostra apenas como referência o que já está no pedido (sem aplicar)
+    const jaNoPedidoAdicionar = Array.from(new Set(pedidoAtual
+        .filter(p => p.id === itemId)
+        .flatMap(p => p.adicionar || [])));
+    const jaNoPedidoRetirar = Array.from(new Set(pedidoAtual
+        .filter(p => p.id === itemId)
+        .flatMap(p => p.retirar || [])));
+
+    // 🧱 Monta o HTML
     container.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:8px;">
         <button class="accordion-btn" type="button" data-acc="retirar" style="width:100%;">Retirar ingredientes ▾</button>
@@ -300,7 +336,7 @@ function renderCustomizationArea(item, container) {
           <div class="options-grid" data-acc="retirar-options">
             ${retirarOptions.map(opt => `<button class="option-btn" data-type="retirar" data-opt="${escapeHtml(opt)}" onclick="toggleCustomizationOption(${itemId}, 'retirar', '${escapeJs(opt)}')">${escapeHtml(opt)}</button>`).join('')}
           </div>
-          <div class="selected-list"><strong>Selecionados:</strong> <span id="selectedRetirar">${cur.retirar.map(escapeHtml).join(', ')}</span></div>
+          <div class="selected-list"><strong>Selecionados:</strong> <span id="selectedRetirar"></span></div>
         </div>
 
         <button class="accordion-btn" type="button" data-acc="adicionar" style="width:100%;">Adicionar extras ▾</button>
@@ -308,42 +344,32 @@ function renderCustomizationArea(item, container) {
           <div class="options-grid" data-acc="adicionar-options">
             ${adicionarOptions.map(opt => `<button class="option-btn" data-type="adicionar" data-opt="${escapeHtml(opt)}" onclick="toggleCustomizationOption(${itemId}, 'adicionar', '${escapeJs(opt)}')">${escapeHtml(opt)}</button>`).join('')}
           </div>
-          <div class="selected-list"><strong>Selecionados:</strong> <span id="selectedAdicionar">${cur.adicionar.map(escapeHtml).join(', ')}</span></div>
+          <div class="selected-list"><strong>Selecionados:</strong> <span id="selectedAdicionar"></span></div>
         </div>
 
+        ${showAlready ? `
         <div class="already-in-pedido" style="text-align:left; font-size:0.9rem; color:#4a5568;">
           <strong>Já no pedido:</strong>
-          <div><small>Adicionar: <span id="alreadyAdicionar">${Array.from(new Set(pedidoAtual.filter(p=>p.id===itemId).flatMap(p=>p.adicionar||[]))).map(escapeHtml).join(', ') || '—'}</span></small></div>
-          <div><small>Retirar: <span id="alreadyRetirar">${Array.from(new Set(pedidoAtual.filter(p=>p.id===itemId).flatMap(p=>p.retirar||[]))).map(escapeHtml).join(', ') || '—'}</span></small></div>
+          <div><small>Adicionar: <span>${jaNoPedidoAdicionar.length ? jaNoPedidoAdicionar.map(escapeHtml).join(', ') : '—'}</span></small></div>
+          <div><small>Retirar: <span>${jaNoPedidoRetirar.length ? jaNoPedidoRetirar.map(escapeHtml).join(', ') : '—'}</span></small></div>
         </div>
+        ` : ''}
       </div>
     `;
 
-    // inicializar estado visual (marcar botões já selecionados)
-    // marcar retirar
-    cur.retirar.forEach(opt => {
-        const btn = container.querySelector(`.option-btn[data-type="retirar"][data-opt="${escapeHtml(opt)}"]`);
-        if (btn) btn.classList.add('option-selected');
-    });
-    // marcar adicionar
-    cur.adicionar.forEach(opt => {
-        const btn = container.querySelector(`.option-btn[data-type="adicionar"][data-opt="${escapeHtml(opt)}"]`);
-        if (btn) btn.classList.add('option-selected');
-    });
-
-    // configurar accordions (toggle)
+    // ⚙️ Accordions
     container.querySelectorAll('.accordion-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const acc = btn.getAttribute('data-acc');
             const content = container.querySelector(`.accordion-content[data-acc="${acc}"]`);
             if (!content) return;
             const isHidden = content.style.display === 'none' || content.style.display === '';
-            // fechar outros
             container.querySelectorAll('.accordion-content').forEach(c => c.style.display = 'none');
             content.style.display = isHidden ? 'block' : 'none';
         });
     });
 }
+
 
 // toggle de opção (adicionar/retirar)
 function toggleCustomizationOption(itemId, type, optionName) {
@@ -392,12 +418,25 @@ function addToPedidoWithCustomization(itemId, observacao, adicionar = [], retira
     const item = menuItems.find(i => i.id === itemId);
     if (!item) return;
 
-    // tentamos encontrar linha existente com mesma configuração (id + mesmas listas + mesma observacao)
-    const existingItem = pedidoAtual.find(p => 
+    // normaliza + deduplica para evitar “Ovo” e “Ovo ” virarem 2 entradas
+    const norm = (arr = []) => {
+        return Array.from(
+            new Set(
+                arr.map(s => String(s).trim()).filter(Boolean)
+            )
+        );
+    };
+
+    const addNorm = norm(adicionar);
+    const retNorm = norm(retirar);
+    const obsNorm = (observacao || '').trim();
+
+    // encontra linha existente com MESMA config (id + listas iguais + mesma obs)
+    const existingItem = pedidoAtual.find(p =>
         p.id === itemId &&
-        (p.observacao || '') === (observacao || '') &&
-        arraysEqual((p.adicionar || []), (adicionar || [])) &&
-        arraysEqual((p.retirar || []), (retirar || []))
+        (p.observacao || '') === obsNorm &&
+        arraysEqual((p.adicionar || []), addNorm) &&
+        arraysEqual((p.retirar || []), retNorm)
     );
 
     if (existingItem) {
@@ -409,14 +448,15 @@ function addToPedidoWithCustomization(itemId, observacao, adicionar = [], retira
             nome: item.nome,
             preco: item.preco,
             quantidade: 1,
-            observacao: observacao || '',
-            adicionar: adicionar.slice(),
-            retirar: retirar.slice()
+            observacao: obsNorm,
+            adicionar: addNorm,
+            retirar: retNorm
         });
     }
 
     renderPedido();
 }
+
 
 // helper para comparar arrays de strings (ordem irrelevante)
 function arraysEqual(a = [], b = []) {
@@ -434,7 +474,7 @@ function renderPedido() {
 
     const pedidoContainer = document.getElementById('pedidoItems');
     const totalElement = document.getElementById('pedidoTotal');
-    
+
     if (!pedidoContainer) return;
 
     if (pedidoAtual.length === 0) {
@@ -442,7 +482,7 @@ function renderPedido() {
         if (totalElement) totalElement.textContent = '0,00';
         return;
     }
-    
+
     pedidoContainer.innerHTML = pedidoAtual.map(item => {
         const retirarHtml = item.retirar && item.retirar.length ? `<div class="pedido-item-note"><small>Retirar: ${escapeHtml(item.retirar.join(', '))}</small></div>` : '';
         const adicionarHtml = item.adicionar && item.adicionar.length ? `<div class="pedido-item-note"><small>Adicionar: ${escapeHtml(item.adicionar.join(', '))}</small></div>` : '';
@@ -462,7 +502,7 @@ function renderPedido() {
             </div>
         </div>`;
     }).join('');
-    
+
     const total = pedidoAtual.reduce((sum, item) => sum + (item.preco * item.quantidade), 0);
     if (totalElement) totalElement.textContent = total.toFixed(2).replace('.', ',');
 }
@@ -527,22 +567,22 @@ async function enviarPedido() {
         showError('Selecione uma mesa primeiro.');
         return;
     }
-    
+
     if (pedidoAtual.length === 0) {
         showError('Adicione pelo menos um item ao pedido.');
         return;
     }
-    
+
     const observacoes = document.getElementById('observacoes') ? document.getElementById('observacoes').value.trim() : '';
-    
+
     const pedidoData = {
         mesa: mesaSelecionada,
         itens: pedidoAtual,
         observacoes: observacoes
     };
-    
+
     showLoading(true);
-    
+
     try {
         const response = await fetch('/api/pedidos', {
             method: 'POST',
@@ -551,19 +591,19 @@ async function enviarPedido() {
             },
             body: JSON.stringify(pedidoData)
         });
-        
+
         if (!response.ok) {
             throw new Error('Erro ao enviar pedido');
         }
-        
+
         const result = await response.json();
         console.log('Pedido enviado:', result);
-        
+
         showLoading(false);
         showSuccess();
-        
+
         clearPedido();
-        
+
     } catch (error) {
         console.error('Erro ao enviar pedido:', error);
         showLoading(false);
@@ -599,14 +639,14 @@ function closeModal() {
 }
 
 // prevenir zoom iOS (mantido)
-document.addEventListener('touchstart', function(e) {
+document.addEventListener('touchstart', function (e) {
     if (e.touches.length > 1) {
         e.preventDefault();
     }
 });
 
 let lastTouchEnd = 0;
-document.addEventListener('touchend', function(e) {
+document.addEventListener('touchend', function (e) {
     const now = (new Date()).getTime();
     if (now - lastTouchEnd <= 300) {
         e.preventDefault();
@@ -620,11 +660,11 @@ document.addEventListener('touchend', function(e) {
 function escapeHtml(text) {
     if (!text) return '';
     return String(text)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 // escape para usar dentro de attribute JS (simples)

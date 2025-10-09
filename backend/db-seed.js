@@ -178,15 +178,15 @@ const BASE_PRATO = ['Arroz', 'Feijao', 'Fritas', 'Salada', 'Cebola', 'Tomate', '
 // Itens: PRATOS (antes "Executivos")
 const PRATOS = [
   { nome: 'Prato do Dia', preco: 22.90 },
-  { nome: 'Frango Grelhado', preco: 24.90 },
-  { nome: 'Frango a Milanesa', preco: 26.90 },
-  { nome: 'Frango a Parmegiana', preco: 28.90 },
-  { nome: 'Porco Grelhado', preco: 25.90 },
-  { nome: 'Boi Grelhado', preco: 31.90 },
-  { nome: 'Boi a Milanesa', preco: 33.90 },
-  { nome: 'Boi a Parmegiana', preco: 35.90 },
-  { nome: 'Tilapia Grelhada', preco: 31.90 },
-  { nome: 'Bife de Figado', preco: 24.90 },
+  { nome: 'Exec Frango Grelhado', preco: 24.90 },
+  { nome: 'Exec Frango a Milanesa', preco: 26.90 },
+  { nome: 'Exec Frango a Parmegiana', preco: 28.90 },
+  { nome: 'Exec Porco Grelhado', preco: 25.90 },
+  { nome: 'Exec Boi Grelhado', preco: 31.90 },
+  { nome: 'Exec Boi a Milanesa', preco: 33.90 },
+  { nome: 'Exec Boi a Parmegiana', preco: 35.90 },
+  { nome: 'Exec Tilapia Grelhada', preco: 31.90 },
+  { nome: 'Exec de Figado', preco: 24.90 },
 ];
 
 // Itens: MASSAS

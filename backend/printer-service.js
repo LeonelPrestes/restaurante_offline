@@ -116,61 +116,59 @@ class PrinterService {
 
   sanitizeForPrint(text) {
     if (!text) return '';
-    return String(text).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').trim();
+    return String(text).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
   }
 
   formatarPedido(pedido) {
     const linhas = [];
     const add = (linha) => {
-      linhas.push(linha);
-      linhas.push('');
+      // só adiciona a linha (sem inserir linha em branco automaticamente)
+      linhas.push(this.sanitizeForPrint(linha));
     };
+    const blank = () => linhas.push('');
 
     add('==== PEDIDO RECEBIDO ====');
     add(`Pedido N: ${pedido.id}`);
-    add(`Data:${new Date().toLocaleString('pt-BR')}`);
+    add(`Data: ${new Date().toLocaleString('pt-BR')}`);
     add('-------------------------');
     add(`Mesa: ${pedido.mesa}`);
 
+    // imprime CADA unidade separadamente (mesmo que quantidade > 1)
     (pedido.itens || []).forEach(item => {
+      add('-------------------------');
       const nome = item.nome || 'Item';
       const qtd = item.quantidade || 1;
+
       for (let i = 0; i < qtd; i++) {
-        add(`- ${nome}`);
-        if (item.adicionar?.length) {
-          item.adicionar.forEach(ad => add(`   + ${this.sanitizeForPrint(ad)}`));
-        }
-        if (item.retirar?.length) {
-          item.retirar.forEach(rt => add(`   - ${this.sanitizeForPrint(rt)}`));
-        }
-        if (item.observacao?.trim()) {
+        add(` > ${nome}`);
+
+        // adicionais
+        (item.adicionar || []).forEach(ad => add(`   + Adc ${this.sanitizeForPrint(ad)}`));
+
+        // retirados
+        (item.retirar || []).forEach(rt => add(`   - Sem ${this.sanitizeForPrint(rt)}`));
+
+        // observacao do item (se houver, pode ter multiplas linhas)
+        if (item.observacao && item.observacao.trim()) {
           item.observacao.split(/\r?\n/).forEach(linha => add(`   Obs: ${this.sanitizeForPrint(linha)}`));
         }
-        add(''); // linha em branco entre os pratos iguais
-      }
 
-
-      if (item.adicionar?.length) {
-        item.adicionar.forEach(ad => add(`   + ${this.sanitizeForPrint(ad)}`));
-      }
-      if (item.retirar?.length) {
-        item.retirar.forEach(rt => add(`   - ${this.sanitizeForPrint(rt)}`));
-      }
-      if (item.observacao?.trim()) {
-        item.observacao.split(/\r?\n/).forEach(linha => add(`   Obs: ${this.sanitizeForPrint(linha)}`));
+        blank(); // separa visualmente itens iguais
       }
     });
 
-    if (pedido.observacoes?.trim()) {
+    if (pedido.observacoes && pedido.observacoes.trim()) {
       add('-------------------------');
       add('Obs Gerais:');
       pedido.observacoes.split(/\r?\n/).forEach(linha => add(this.sanitizeForPrint(linha)));
+      blank();
     }
 
     add('=========================');
-    add(' ');
-    return linhas.join(os.EOL);
+    return linhas.join(os.EOL.repeat(2)); // 2 quebras = 1 linha em branco entre cada
+
   }
+
 
   async imprimirTexto(texto) {
     if (!this.porta || !this.porta.isOpen) {
