@@ -178,6 +178,7 @@ const BASE_PRATO = ['Arroz', 'Feijao', 'Fritas', 'Salada', 'Cebola', 'Tomate', '
 // Itens: PRATOS (antes "Executivos")
 const PRATOS = [
   { nome: 'Prato do Dia', preco: 22.90 },
+  { nome: 'Feijoada', preco: 24.90 },
   { nome: 'Exec Frango Grelhado', preco: 24.90 },
   { nome: 'Exec Frango a Milanesa', preco: 26.90 },
   { nome: 'Exec Frango a Parmegiana', preco: 28.90 },

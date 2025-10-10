@@ -56,13 +56,22 @@ db.serialize(() => {
 // =======================
 // Funções de consulta
 // =======================
+
+// 🔽 Corrigido: garante ordem fixa (Prato do Dia e Feijoada primeiro)
 function getItens() {
   return new Promise((resolve, reject) => {
     db.all(
       `SELECT i.id, i.nome, i.preco, i.ingredientes, c.nome AS categoria
        FROM itens i
        LEFT JOIN categorias c ON i.categoria_id = c.id
-       ORDER BY c.nome, i.nome`,
+       ORDER BY 
+         CASE 
+           WHEN i.nome = 'Prato do Dia' THEN 1
+           WHEN i.nome = 'Feijoada' THEN 2
+           ELSE 3
+         END,
+         c.nome ASC, 
+         i.nome ASC`,
       [],
       (err, rows) => (err ? reject(err) : resolve(rows))
     );
@@ -89,7 +98,13 @@ function getItensPorCategoria(categoria) {
        FROM itens i
        LEFT JOIN categorias c ON i.categoria_id = c.id
        WHERE c.nome = ?
-       ORDER BY i.nome`,
+       ORDER BY 
+         CASE 
+           WHEN i.nome = 'Prato do Dia' THEN 1
+           WHEN i.nome = 'Feijoada' THEN 2
+           ELSE 3
+         END,
+         i.nome ASC`,
       [categoria],
       (err, rows) => (err ? reject(err) : resolve(rows))
     );

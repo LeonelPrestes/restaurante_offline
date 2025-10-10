@@ -604,6 +604,8 @@ async function enviarPedido() {
 
         clearPedido();
 
+
+
     } catch (error) {
         console.error('Erro ao enviar pedido:', error);
         showLoading(false);
@@ -634,8 +636,17 @@ function showError(message) {
 function closeModal() {
     const success = document.getElementById('successModal');
     const error = document.getElementById('errorModal');
+
+    // fecha ambos os modais
     if (success) success.style.display = 'none';
     if (error) error.style.display = 'none';
+
+    // 🔄 se o modal fechado for o de sucesso, recarrega a página
+    if (success && success.style.display === 'none' && (!error || error.style.display === 'none')) {
+        setTimeout(() => {
+            location.reload(); // recarrega após o usuário clicar em OK
+        }, 300); // pequeno delay pra evitar piscar abrupto
+    }
 }
 
 // prevenir zoom iOS (mantido)
