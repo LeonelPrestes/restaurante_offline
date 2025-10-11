@@ -70,90 +70,87 @@ function setupEventListeners() {
         });
     });
 
-    // Configurar botões do modal de observação (existem no index.html)
     const modal = document.getElementById('modalObservacao');
     if (modal) {
         const btnCancelar = document.getElementById('btnCancelarObs');
         const btnAdicionar = document.getElementById('btnAdicionarObs');
         const textarea = document.getElementById('textoObservacao');
 
-        // cancelar fecha modal sem adicionar (descarta customização temporária)
+        // Cancelar modal
         if (btnCancelar) btnCancelar.addEventListener('click', () => {
             const itemId = modal.dataset.itemId;
-
-            // 🔄 Remove customização temporária para esse item
-            if (itemId) {
-                delete currentCustomizationByItem[itemId];
-            }
-
-            // 🧹 Limpa campo de observação
+            if (itemId) delete currentCustomizationByItem[itemId];
             if (textarea) textarea.value = '';
-
-            // 🧽 Remove seleção visual dos botões
-            const buttons = modal.querySelectorAll('.option-btn.option-selected');
-            buttons.forEach(btn => btn.classList.remove('option-selected'));
-
-            // 🗑️ Limpa conteúdo da área de customização
             const custArea = modal.querySelector('#customizationArea');
             if (custArea) custArea.innerHTML = '';
-
-            // 🚪 Fecha o modal e limpa o ID
             modal.style.display = 'none';
             modal.dataset.itemId = '';
         });
 
-        // adicionar -> salva item ao pedido com customizações
+        // ✅ Adicionar item ao pedido
         if (btnAdicionar) btnAdicionar.addEventListener('click', () => {
-            const itemId = modal.dataset.itemId;
+            const itemId = parseInt(modal.dataset.itemId);
             const observacao = textarea ? textarea.value.trim() : '';
 
-            if (itemId) {
-                // Recupera a customização atual (ou cria nova limpa)
-                const customization = currentCustomizationByItem[itemId] || { adicionar: [], retirar: [], observacao: '' };
-                customization.observacao = observacao;
-
-                // Adiciona o item ao pedido
-                addToPedidoWithCustomization(
-                    parseInt(itemId),
-                    customization.observacao,
-                    customization.adicionar || [],
-                    customization.retirar || []
-                );
-
-                // 🔄 Limpa o estado para esse item (impede herança no próximo modal)
-                delete currentCustomizationByItem[itemId];
+            if (!itemId) {
+                console.warn('⚠️ Nenhum item selecionado no modal.');
+                return;
             }
 
-            // 🧹 Fecha e reseta o modal
+            // 🔍 Procura o item dentro de todos os grupos
+            let item = null;
+            for (const grupo of menuItems) {
+                const encontrado = grupo.itens.find(i => i.id === itemId);
+                if (encontrado) {
+                    item = encontrado;
+                    break;
+                }
+            }
+
+            if (!item) {
+                console.warn(`⚠️ Item ID ${itemId} não encontrado ao adicionar.`);
+                return;
+            }
+
+            const customization = currentCustomizationByItem[itemId] || {
+                adicionar: [],
+                retirar: [],
+                observacao: ''
+            };
+            customization.observacao = observacao;
+
+            // ✅ Chama a função global corrigida
+            addToPedidoWithCustomization(
+                item.id,
+                customization.observacao,
+                customization.adicionar,
+                customization.retirar
+            );
+
+            // 🔄 Limpa e fecha modal
+            delete currentCustomizationByItem[itemId];
+            if (textarea) textarea.value = '';
+            const custArea = modal.querySelector('#customizationArea');
+            if (custArea) custArea.innerHTML = '';
             modal.style.display = 'none';
             modal.dataset.itemId = '';
 
-            if (textarea) textarea.value = '';
-
-            const custArea = modal.querySelector('#customizationArea');
-            if (custArea) custArea.innerHTML = '';
+            renderPedido();
         });
 
     }
 
-    // Fechar qualquer modal clicando fora (se o overlay tiver a classe 'modal')
+
+    // Fechar modal clicando fora
     document.addEventListener('click', function (e) {
         if (e.target.classList && e.target.classList.contains('modal')) {
-            const modal = e.target;
-            const textarea = modal.querySelector('#textoObservacao');
-
-            // 🧽 Resetar tudo ao fechar clicando fora
-            if (textarea) textarea.value = '';
-            const custArea = modal.querySelector('#customizationArea');
-            if (custArea) custArea.innerHTML = '';
-            const buttons = modal.querySelectorAll('.option-btn.option-selected');
-            buttons.forEach(btn => btn.classList.remove('option-selected'));
-
             modal.dataset.itemId = '';
             modal.style.display = 'none';
+            const custArea = modal.querySelector('#customizationArea');
+            if (custArea) custArea.innerHTML = '';
+            if (textarea) textarea.value = '';
         }
     });
-
 }
 
 // -----------------------------
@@ -180,7 +177,16 @@ function selectMesa(numeroMesa) {
     if (menuSection) menuSection.style.display = 'block';
     if (pedidoSection) pedidoSection.style.display = 'block';
 
-    if (menuSection) menuSection.scrollIntoView({ behavior: 'smooth' });
+    if (menuSection) {
+  const headerOffset = 100; // ajuste conforme a altura real do seu cabeçalho em pixels
+  const elementPosition = menuSection.getBoundingClientRect().top;
+  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+  window.scrollTo({
+    top: offsetPosition,
+    behavior: 'smooth'
+  });
+}
 }
 
 function clearMesa() {
@@ -201,18 +207,31 @@ function clearMesa() {
 }
 
 // -----------------------------
-// Menu: carregar e renderizar
+// Menu: carregar e renderizar (com cardápio dinâmico)
 // -----------------------------
 async function loadMenuItems() {
     try {
-        const response = await fetch('/api/menu');
+        // 🔍 1. Detecta qual cardápio está ativo
+        const cardapioRes = await fetch('/api/cardapio/atual');
+        const cardapioInfo = await cardapioRes.json();
+        const cardapioSlug = cardapioInfo.cardapio?.toLowerCase() || 'semana';
+        console.log('🧭 Cardápio ativo:', cardapioSlug);
+
+        // 🥘 2. Carrega o menu correspondente
+        const response = await fetch(`/api/menu?cardapio=${cardapioSlug}`);
         if (!response.ok) throw new Error('Erro ao carregar menu');
 
         menuItems = await response.json();
-        // construir extras global baseando-se no cardápio
+
+        if (!Array.isArray(menuItems) || menuItems.length === 0) {
+            console.warn('⚠️ Nenhum item retornado do cardápio');
+        }
+
+        // 3. Constrói extras e renderiza categorias
         buildExtrasList();
         renderMenuCategories();
         renderMenuItems();
+
     } catch (error) {
         console.error('Erro ao carregar menu:', error);
         showError('Erro ao carregar o cardápio. Verifique a conexão.');
@@ -226,15 +245,20 @@ function buildExtrasList() {
 }
 
 function renderMenuCategories() {
-    const categoriesContainer = document.getElementById('menuCategories');
+    const categoriesContainer = document.getElementById("menuCategories");
     if (!categoriesContainer) return;
-    const categories = ['Todos', ...new Set(menuItems.map(item => item.categoria))];
 
-    categoriesContainer.innerHTML = categories.map(category =>
-        `<button class="category-btn ${category === categoriaAtiva ? 'active' : ''}" 
-                 onclick="selectCategory('${category}')">${category}</button>`
-    ).join('');
+    // Agora menuItems é um array de grupos
+    const categories = ["Todos", ...menuItems.map(g => g.categoria)];
+
+    categoriesContainer.innerHTML = categories
+        .map(category => `
+      <button class="category-btn ${category === categoriaAtiva ? 'active' : ''}" 
+              onclick="selectCategory('${category}')">${category}</button>
+    `)
+        .join("");
 }
+
 
 function selectCategory(category) {
     categoriaAtiva = category;
@@ -243,21 +267,34 @@ function selectCategory(category) {
 }
 
 function renderMenuItems() {
-    const itemsContainer = document.getElementById('menuItems');
+    const itemsContainer = document.getElementById("menuItems");
     if (!itemsContainer) return;
 
-    const filteredItems = categoriaAtiva === 'Todos'
-        ? menuItems
-        : menuItems.filter(item => item.categoria === categoriaAtiva);
+    // Filtra as categorias conforme o botão ativo
+    let gruposFiltrados = [];
+    if (categoriaAtiva === "Todos") {
+        gruposFiltrados = menuItems;
+    } else {
+        gruposFiltrados = menuItems.filter(g => g.categoria === categoriaAtiva);
+    }
 
-    itemsContainer.innerHTML = filteredItems.map(item =>
-        `<div class="menu-item" onclick="openItemModal(${item.id})">
-            <div class="menu-item-name">${item.nome}</div>
-            <div class="menu-item-category">${item.categoria}</div>
-            <div class="menu-item-price">R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
-        </div>`
-    ).join('');
+    // Renderiza
+    itemsContainer.innerHTML = gruposFiltrados
+        .map(grupo => `
+      <div class="menu-category-group">
+        <h3 class="category-title">${grupo.categoria}</h3>
+        <div class="menu-category-items">
+          ${grupo.itens.map(item => `
+            <div class="menu-item" onclick="openItemModal(${item.id})">
+              <div class="menu-item-name">${item.nome}</div>
+              <div class="menu-item-price">R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `).join("");
 }
+
 
 // -----------------------------
 // Modal: abrir para um item (agora com Retirar / Adicionar)
@@ -268,8 +305,20 @@ function openItemModal(itemId) {
         .forEach(btn => btn.classList.remove('option-selected'));
     const textarea = document.getElementById('textoObservacao');
 
-    const item = menuItems.find(i => i.id === itemId);
-    if (!item) return;
+    // 🔍 Agora procura o item dentro de todos os grupos (novo formato agrupado)
+    let item = null;
+    for (const grupo of menuItems) {
+        const encontrado = grupo.itens.find(i => i.id === itemId);
+        if (encontrado) {
+            item = encontrado;
+            break;
+        }
+    }
+
+    if (!item) {
+        console.warn(`Item ID ${itemId} não encontrado no cardápio.`);
+        return;
+    }
 
     if (!modal) {
         // fallback (mantém compatibilidade)
@@ -304,9 +353,9 @@ function openItemModal(itemId) {
     // ✍️ Limpa o campo de observação
     if (textarea) {
         textarea.value = '';
-        textarea.focus();
     }
 }
+
 
 
 // renderiza a UI interna do modal para customização
@@ -345,14 +394,6 @@ function renderCustomizationArea(item, container, showAlready = false) {
           </div>
           <div class="selected-list"><strong>Selecionados:</strong> <span id="selectedAdicionar"></span></div>
         </div>
-
-        ${showAlready ? `
-        <div class="already-in-pedido" style="text-align:left; font-size:0.9rem; color:#4a5568;">
-          <strong>Já no pedido:</strong>
-          <div><small>Adicionar: <span>${jaNoPedidoAdicionar.length ? jaNoPedidoAdicionar.map(escapeHtml).join(', ') : '—'}</span></small></div>
-          <div><small>Retirar: <span>${jaNoPedidoRetirar.length ? jaNoPedidoRetirar.map(escapeHtml).join(', ') : '—'}</span></small></div>
-        </div>
-        ` : ''}
       </div>
     `;
 
@@ -412,49 +453,52 @@ function addToPedido(itemId) {
     addToPedidoWithCustomization(itemId, '', [], []);
 }
 
-// Nova função: adiciona item com observação, adicionar e retirar
 function addToPedidoWithCustomization(itemId, observacao, adicionar = [], retirar = []) {
-    const item = menuItems.find(i => i.id === itemId);
-    if (!item) return;
-
-    // normaliza + deduplica para evitar “Ovo” e “Ovo ” virarem 2 entradas
-    const norm = (arr = []) => {
-        return Array.from(
-            new Set(
-                arr.map(s => String(s).trim()).filter(Boolean)
-            )
-        );
-    };
-
-    const addNorm = norm(adicionar);
-    const retNorm = norm(retirar);
-    const obsNorm = (observacao || '').trim();
-
-    // encontra linha existente com MESMA config (id + listas iguais + mesma obs)
-    const existingItem = pedidoAtual.find(p =>
-        p.id === itemId &&
-        (p.observacao || '') === obsNorm &&
-        arraysEqual((p.adicionar || []), addNorm) &&
-        arraysEqual((p.retirar || []), retNorm)
-    );
-
-    if (existingItem) {
-        existingItem.quantidade++;
-    } else {
-        pedidoAtual.push({
-            uid: generateUid(),
-            id: item.id,
-            nome: item.nome,
-            preco: item.preco,
-            quantidade: 1,
-            observacao: obsNorm,
-            adicionar: addNorm,
-            retirar: retNorm
-        });
+  let item = null;
+  for (const grupo of menuItems) {
+    const encontrado = grupo.itens.find(i => i.id === itemId);
+    if (encontrado) {
+      item = encontrado;
+      break;
     }
+  }
 
-    renderPedido();
+  if (!item) {
+    console.warn(`⚠️ Item ID ${itemId} não encontrado em menuItems`);
+    return;
+  }
+
+  const norm = (arr = []) => [...new Set(arr.map(s => String(s).trim()).filter(Boolean))];
+  const addNorm = norm(adicionar);
+  const retNorm = norm(retirar);
+  const obsNorm = (observacao || '').trim();
+
+  const existingItem = pedidoAtual.find(p =>
+    p.id === item.id &&
+    (p.observacao || '') === obsNorm &&
+    arraysEqual(p.adicionar || [], addNorm) &&
+    arraysEqual(p.retirar || [], retNorm)
+  );
+
+  if (existingItem) {
+    existingItem.quantidade++;
+  } else {
+    pedidoAtual.push({
+      uid: generateUid(),
+      id: item.id,
+      nome: item.nome,
+      preco: item.preco,
+      quantidade: 1,
+      observacao: obsNorm,
+      adicionar: addNorm,
+      retirar: retNorm
+    });
+  }
+
+  console.log("✅ Item adicionado ao pedido:", item.nome, addNorm, retNorm, obsNorm);
+  renderPedido();
 }
+
 
 
 // helper para comparar arrays de strings (ordem irrelevante)

@@ -152,16 +152,29 @@ section h2 {
     box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
 }
 
+.menu-section {
+    height: auto;
+}
 
 
 /* Menu Categories */
 .menu-categories {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
     margin-bottom: 1rem;
-    overflow-x: auto;
+    height: auto;
     padding-bottom: 0.5rem;
+    justify-content: space-between;
 }
+
+.menu-category-items {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem; /* opcional: espaço entre os itens */
+}
+
 
 .category-btn {
     background: #e2e8f0;
@@ -169,8 +182,8 @@ section h2 {
     border: none;
     border-radius: 20px;
     padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-size: 1.1rem;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     white-space: nowrap;
@@ -196,6 +209,7 @@ section h2 {
     padding: 1rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .menu-item:hover {
@@ -209,6 +223,7 @@ section h2 {
     color: #2d3748;
     margin-bottom: 0.25rem;
 }
+
 
 .menu-item-category {
     font-size: 0.75rem;
@@ -481,7 +496,12 @@ section h2 {
     
     .menu-items {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
+    }
+
+    .category-title {
+        font-size: 1.25rem;
+        text-align: center;
     }
     
     .pedido-actions {
@@ -505,16 +525,8 @@ section h2 {
     }
 
     .menu-items {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .menu-categories {
-        flex-wrap: wrap;
-    }
-    
-    .category-btn {
-        font-size: 0.75rem;
-        padding: 0.375rem 0.75rem;
+        display: grid;
+        grid-template-columns:1fr;
     }
 }
 
