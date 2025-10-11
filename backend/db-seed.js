@@ -297,6 +297,68 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
         ordem: ordem++,
       });
     }
+// ---------------------------------
+    // PETISCOS — SEMANA e FDS
+    // ---------------------------------
+    const PETISCOS = [
+{ nome: 'Torresmo Tira 100g', preco: 8.00 }, { nome: 'Bolinho de Bacalhau (12 unidades)', preco: 39.00 }, { nome: 'Bolinho de Bacalhau Meia (6 unidades)', preco: 23.40 }, { nome: 'Camarao Empanado (12 unidades)', preco: 39.00 }, { nome: 'Camarao Empanado Meia (6 unidades)', preco: 23.40 }, { nome: 'Contra File com Fritas', preco: 49.00 }, { nome: 'Contra File com Fritas Meia', preco: 29.40 }, { nome: 'Fritas Porcao', preco: 28.00 }, { nome: 'Fritas Porcao Meia', preco: 16.80 }, { nome: 'Fritas com Linguica', preco: 34.00 }, { nome: 'Fritas com Linguica Meia', preco: 20.40 }, { nome: 'Figado com Jilo', preco: 32.00 }, { nome: 'Figado com Jilo Meia', preco: 19.20 }, { nome: 'Moelinha', preco: 34.00 }, { nome: 'Moelinha Meia', preco: 20.40 }, { nome: 'Lingua de Boi ao Molho de Vinho', preco: 32.00 }, { nome: 'Lingua de Boi ao Molho de Vinho Meia', preco: 19.20 }, { nome: 'Isca de Tilapia', preco: 49.00 }, { nome: 'Isca de Tilapia Meia', preco: 29.40 }, { nome: 'Pastel Queijo (12 unidades)', preco: 24.00 }, { nome: 'Pastel Queijo Meia (6 unidades)', preco: 14.40 }, { nome: 'Camarao Alho e Oleo', preco: 39.00 }, { nome: 'Camarao Alho e Oleo Meia', preco: 23.40 }, { nome: 'Provolone na Pedra', preco: 31.00 }, { nome: 'Provolone na Pedra Meia', preco: 18.60 }, { nome: 'Feijao Amigo Pequeno', preco: 6.00 },
+    ];
+
+    ordem = 1;
+    for (const p of PETISCOS) {
+      const itemId = await ensureItem({
+        nome: p.nome,
+        categoria_id: categoriaMap["Petiscos"],
+        ingredientes: [],
+      });
+
+      // adiciona ao cardápio da semana
+      await ensureItemCardapio({
+        cardapio_id: semanaId,
+        item_id: itemId,
+        preco: p.preco,
+        ordem: ordem,
+      });
+
+      // adiciona também ao cardápio do fim de semana
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: p.preco,
+        ordem: ordem++,
+      });
+    }
+    // ---------------------------------
+    // PETISCOS — SEMANA e FDS
+    // ---------------------------------
+    const PETISCOS_SEMANA_FDS = [
+{ nome: 'Torresmo Tira 100g', preco: 8.00 }, { nome: 'Bolinho de Bacalhau (12 unidades)', preco: 39.00 }, { nome: 'Bolinho de Bacalhau Meia (6 unidades)', preco: 23.40 }, { nome: 'Camarao Empanado (12 unidades)', preco: 39.00 }, { nome: 'Camarao Empanado Meia (6 unidades)', preco: 23.40 }, { nome: 'Contra File com Fritas', preco: 49.00 }, { nome: 'Contra File com Fritas Meia', preco: 29.40 }, { nome: 'Fritas Porcao', preco: 28.00 }, { nome: 'Fritas Porcao Meia', preco: 16.80 }, { nome: 'Fritas com Linguica', preco: 34.00 }, { nome: 'Fritas com Linguica Meia', preco: 20.40 }, { nome: 'Figado com Jilo', preco: 32.00 }, { nome: 'Figado com Jilo Meia', preco: 19.20 }, { nome: 'Moelinha', preco: 34.00 }, { nome: 'Moelinha Meia', preco: 20.40 }, { nome: 'Lingua de Boi ao Molho de Vinho', preco: 32.00 }, { nome: 'Lingua de Boi ao Molho de Vinho Meia', preco: 19.20 }, { nome: 'Isca de Tilapia', preco: 49.00 }, { nome: 'Isca de Tilapia Meia', preco: 29.40 }, { nome: 'Pastel Queijo (12 unidades)', preco: 24.00 }, { nome: 'Pastel Queijo Meia (6 unidades)', preco: 14.40 }, { nome: 'Camarao Alho e Oleo', preco: 39.00 }, { nome: 'Camarao Alho e Oleo Meia', preco: 23.40 }, { nome: 'Provolone na Pedra', preco: 31.00 }, { nome: 'Provolone na Pedra Meia', preco: 18.60 }, { nome: 'Feijao Amigo Pequeno', preco: 6.00 },
+    ];
+
+    ordem = 1;
+    for (const p of PETISCOS) {
+      const itemId = await ensureItem({
+        nome: p.nome,
+        categoria_id: categoriaMap["Petiscos"],
+        ingredientes: [],
+      });
+
+      // adiciona ao cardápio da semana
+      await ensureItemCardapio({
+        cardapio_id: semanaId,
+        item_id: itemId,
+        preco: p.preco,
+        ordem: ordem,
+      });
+
+      // adiciona também ao cardápio do fim de semana
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: p.preco,
+        ordem: ordem++,
+      });
+    }
 
     console.log("✅ Seed aplicado com sucesso!");
   } catch (err) {
