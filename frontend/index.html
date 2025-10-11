@@ -12,10 +12,16 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <h1>🍽️ Sistema Restaurante</h1>
-                <div class="connection-status" id="connectionStatus">
-                    <span class="status-indicator offline"></span>
-                    <span class="status-text">Conectando...</span>
+                <div class="header-bottom">
+
+                    <div class="connection-status" id="connectionStatus">
+                        <span class="status-indicator offline"></span>
+                        <span class="status-text">Conectando...</span>
+                    </div>
+                    <div class="mesa-selected" id="mesaSelected" style="display: none;">
+                        <span>Mesa: <strong class="numberMesa" id="mesaNumber"></strong></span>
+                        <button class="btn-secondary" onclick="clearMesa()">Trocar Mesa</button>
+                    </div>
                 </div>
             </div>
         </header>
@@ -53,10 +59,7 @@
                     <button class="mesa-btn" data-mesa="24">Mesa 24</button>
                     <button class="mesa-btn" data-mesa="25">Mesa 25</button>
                 </div>
-                <div class="mesa-selected" id="mesaSelected" style="display: none;">
-                    <span>Mesa selecionada: <strong id="mesaNumber"></strong></span>
-                    <button class="btn-secondary" onclick="clearMesa()">Trocar Mesa</button>
-                </div>
+
             </section>
 
             <!-- Menu Items -->

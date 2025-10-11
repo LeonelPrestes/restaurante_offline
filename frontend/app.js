@@ -198,7 +198,6 @@ function clearMesa() {
     if (menuSection) menuSection.style.display = 'none';
     if (pedidoSection) pedidoSection.style.display = 'none';
 
-    clearPedido();
 }
 
 // -----------------------------
