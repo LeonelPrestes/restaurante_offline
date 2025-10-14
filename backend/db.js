@@ -8,7 +8,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 /* =========================================================
-   🔧 Funções utilitárias internas
+   🔧 Funções utilitárias
    ========================================================= */
 function isFimDeSemana() {
   const dia = new Date().getDay(); // 0 = domingo, 6 = sábado
@@ -28,7 +28,7 @@ function getAsync(sql, params = []) {
 }
 
 /* =========================================================
-   🔍 Função auxiliar: resolve o ID do cardápio correto
+   🔎 Resolve o ID do cardápio atual (SEMANA ou FDS)
    ========================================================= */
 async function getCardapioId(parametro = null) {
   let slug = "semana";
@@ -55,7 +55,8 @@ async function getItens(parametroCardapio = null) {
       i.nome,
       ic.preco,
       i.ingredientes,
-      ic.ordem
+      ic.ordem,
+      i.aceita_meia_porcao
     FROM itens_cardapio ic
     JOIN itens i ON ic.item_id = i.id
     JOIN categorias c ON i.categoria_id = c.id
@@ -68,17 +69,19 @@ async function getItens(parametroCardapio = null) {
 
   // Agrupar por categoria
   const agrupado = [];
-  let atual = null;
+  let grupoAtual = null;
 
   for (const row of rows) {
-    if (!atual || atual.categoria !== row.categoria) {
-      atual = { categoria: row.categoria, itens: [] };
-      agrupado.push(atual);
+    if (!grupoAtual || grupoAtual.categoria !== row.categoria) {
+      grupoAtual = { categoria: row.categoria, itens: [] };
+      agrupado.push(grupoAtual);
     }
-    atual.itens.push({
+
+    grupoAtual.itens.push({
       id: row.id,
       nome: row.nome,
       preco: row.preco,
+      aceita_meia_porcao: !!row.aceita_meia_porcao,
       ingredientes: JSON.parse(row.ingredientes || "[]"),
     });
   }
@@ -87,7 +90,7 @@ async function getItens(parametroCardapio = null) {
 }
 
 /* =========================================================
-   🔎 getItemPorId() → Detalhe de item específico
+   🔍 getItemPorId() → Detalhe de item específico
    ========================================================= */
 async function getItemPorId(id, parametroCardapio = null) {
   const cardapioId = await getCardapioId(parametroCardapio);
@@ -98,6 +101,7 @@ async function getItemPorId(id, parametroCardapio = null) {
       i.nome,
       i.ingredientes,
       i.descricao,
+      i.aceita_meia_porcao,
       c.nome AS categoria,
       ic.preco,
       ic.ordem
@@ -107,7 +111,18 @@ async function getItemPorId(id, parametroCardapio = null) {
     WHERE i.id = ?
   `;
 
-  return await getAsync(sql, [cardapioId, id]);
+  const row = await getAsync(sql, [cardapioId, id]);
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    nome: row.nome,
+    preco: row.preco,
+    categoria: row.categoria,
+    aceita_meia_porcao: !!row.aceita_meia_porcao,
+    ingredientes: JSON.parse(row.ingredientes || "[]"),
+    descricao: row.descricao || "",
+  };
 }
 
 /* =========================================================
@@ -123,7 +138,8 @@ async function getItensPorCategoria(categoria, parametroCardapio = null) {
       i.ingredientes,
       ic.preco,
       c.nome AS categoria,
-      ic.ordem
+      ic.ordem,
+      i.aceita_meia_porcao
     FROM itens_cardapio ic
     JOIN itens i ON ic.item_id = i.id
     JOIN categorias c ON i.categoria_id = c.id
@@ -139,6 +155,7 @@ async function getItensPorCategoria(categoria, parametroCardapio = null) {
     nome: r.nome,
     preco: r.preco,
     categoria: r.categoria,
+    aceita_meia_porcao: !!r.aceita_meia_porcao,
     ingredientes: JSON.parse(r.ingredientes || "[]"),
   }));
 }

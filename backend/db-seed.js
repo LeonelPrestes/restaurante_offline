@@ -2,8 +2,9 @@
  * =========================================================
  * SCRIPT DE POPULAÇÃO DO BANCO (backend/db-seed.js)
  * =========================================================
- * - Cria os cardápios "Semana" e "FDS"
+ * - Cria os cardápios "SEMANA" e "FDS"
  * - Popula categorias, itens, variantes e preços específicos
+ * - Aplica aceitação de meia porção em PETISCOS e A LA CARTE
  * - Mantém idempotência (não duplica dados)
  * =========================================================
  */
@@ -45,10 +46,17 @@ async function ensureCardapio(nome, slug, dias_validos) {
   return row?.id;
 }
 
-async function ensureItem({ nome, categoria_id, ingredientes, descricao }) {
+async function ensureItem({
+  nome,
+  categoria_id,
+  ingredientes,
+  descricao,
+  aceita_meia_porcao = 0,
+}) {
   await run(
-    `INSERT OR IGNORE INTO itens (nome, categoria_id, ingredientes, descricao) VALUES (?, ?, ?, ?)`,
-    [nome, categoria_id, JSON.stringify(ingredientes || []), descricao || ""]
+    `INSERT OR IGNORE INTO itens (nome, categoria_id, ingredientes, descricao, aceita_meia_porcao)
+     VALUES (?, ?, ?, ?, ?)`,
+    [nome, categoria_id, JSON.stringify(ingredientes || []), descricao || "", aceita_meia_porcao]
   );
   const row = await get(`SELECT id FROM itens WHERE nome = ?`, [nome]);
   return row?.id;
@@ -93,24 +101,24 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
     // ---------------------------------
     // CARDÁPIOS
     // ---------------------------------
-    const semanaId = await ensureCardapio("Semana", "semana", "1,2,3,4,5");
+    const semanaId = await ensureCardapio("SEMANA", "semana", "1,2,3,4,5");
     const fdsId = await ensureCardapio("FDS", "fds", "6,0");
 
     // ---------------------------------
     // CATEGORIAS
     // ---------------------------------
     const categorias = [
-      "Pratos",
-      "Massas",
-      "Petiscos",
-      "Adicionais",
-      "Bebidas",
-      "Sobremesas",
-      "Pratos FDS",
-      "Pratos a la carte",
-      "Pratos Lights",
-      "Pratos Kids",
-      "Massas FDS",
+      "PRATOS",
+      "MASSAS",
+      "PETISCOS",
+      "ADICIONAIS",
+      "BEBIDAS",
+      "SOBREMESAS",
+      "PRATOS FDS",
+      "PRATOS A LA CARTE",
+      "PRATOS LIGHTS",
+      "PRATOS KIDS",
+      "MASSAS FDS",
     ];
 
     const categoriaMap = {};
@@ -119,10 +127,10 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
     }
 
     // ---------------------------------
-    // VARIANTES (Molhos)
+    // VARIANTES (MOLHOS)
     // ---------------------------------
-    const varMolho = await ensureVariante("Molho", 1);
-    const molhos = ["Ao Sugo", "Bolonhesa", "Branco"];
+    const varMolho = await ensureVariante("MOLHO", 1);
+    const molhos = ["AO SUGO", "BOLONHESA", "BRANCO"];
     for (let i = 0; i < molhos.length; i++) {
       await ensureVarianteOpcao(varMolho, molhos[i], i + 1);
     }
@@ -131,34 +139,35 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
     // ITENS — SEMANA
     // ---------------------------------
     const BASE_PRATO = [
-      "Arroz",
-      "Feijao",
-      "Fritas",
-      "Salada",
-      "Cebola",
-      "Tomate",
-      "Alface",
+      "ARROZ",
+      "FEIJAO",
+      "FRITAS",
+      "SALADA",
+      "CEBOLA",
+      "TOMATE",
+      "ALFACE",
+      "PROTEINA",
     ];
 
     const PRATOS = [
-      { nome: "Prato do Dia", preco: 22.9 },
-      { nome: "Feijoada", preco: 24.9 },
-      { nome: "Exec Frango Grelhado", preco: 24.9 },
-      { nome: "Exec Frango a Milanesa", preco: 26.9 },
-      { nome: "Exec Frango a Parmegiana", preco: 28.9 },
-      { nome: "Exec Porco Grelhado", preco: 25.9 },
-      { nome: "Exec Boi Grelhado", preco: 31.9 },
-      { nome: "Exec Boi a Milanesa", preco: 33.9 },
-      { nome: "Exec Boi a Parmegiana", preco: 35.9 },
-      { nome: "Exec Tilapia Grelhada", preco: 31.9 },
-      { nome: "Exec de Figado", preco: 24.9 },
+      { nome: "PRATO DO DIA", preco: 22.9 },
+      { nome: "FEIJOADA", preco: 24.9 },
+      { nome: "EXEC FRANGO GRELHADO", preco: 24.9 },
+      { nome: "EXEC FRANGO A MILANESA", preco: 26.9 },
+      { nome: "EXEC FRANGO A PARMEGIANA", preco: 28.9 },
+      { nome: "EXEC PORCO GRELHADO", preco: 25.9 },
+      { nome: "EXEC BOI GRELHADO", preco: 31.9 },
+      { nome: "EXEC BOI A MILANESA", preco: 33.9 },
+      { nome: "EXEC BOI A PARMEGIANA", preco: 35.9 },
+      { nome: "EXEC TILAPIA GRELHADA", preco: 31.9 },
+      { nome: "EXEC DE FIGADO", preco: 24.9 },
     ];
 
     let ordem = 1;
     for (const p of PRATOS) {
       const itemId = await ensureItem({
         nome: p.nome,
-        categoria_id: categoriaMap["Pratos"],
+        categoria_id: categoriaMap["PRATOS"],
         ingredientes: BASE_PRATO,
       });
       await ensureItemCardapio({
@@ -173,18 +182,18 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
     // ITENS — FDS
     // ---------------------------------
     const PRATOS_FDS = [
-      { nome: "Executivo de Frango", preco: 29.9 },
-      { nome: "Executivo de Porco", preco: 29.9 },
-      { nome: "Executivo de Boi", preco: 37.9 },
-      { nome: "Executivo de Peixe", preco: 35.9 },
+      { nome: "EXECUTIVO DE FRANGO", preco: 29.9 },
+      { nome: "EXECUTIVO DE PORCO", preco: 29.9 },
+      { nome: "EXECUTIVO DE BOI", preco: 37.9 },
+      { nome: "EXECUTIVO DE PEIXE", preco: 35.9 },
     ];
 
     ordem = 1;
     for (const p of PRATOS_FDS) {
       const itemId = await ensureItem({
         nome: p.nome,
-        categoria_id: categoriaMap["Pratos FDS"],
-        ingredientes: ["Arroz", "Fritas", "Alface", "Tomate"],
+        categoria_id: categoriaMap["PRATOS FDS"],
+        ingredientes: ["ARROZ", "FRITAS", "ALFACE", "TOMATE"],
       });
       await ensureItemCardapio({
         cardapio_id: fdsId,
@@ -194,27 +203,30 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       });
     }
 
+    // ---------------------------------
+    // PRATOS A LA CARTE — TODOS ACEITAM MEIA PORÇÃO
+    // ---------------------------------
     const PRATOS_A_LA_CARTE = [
-      { nome: "Parmegiana de Frango", preco: 86.0 },
-      { nome: "File de Frango c/ Champignon", preco: 90.0 },
-      { nome: "Parmegiana de Boi", preco: 98.0 },
-      { nome: "Contra File c/ Fritas", preco: 92.0 },
-      { nome: "File Mignon c/ Fritas", preco: 118.0 },
-      { nome: "File Mignon ao Molho Madeira", preco: 112.0 },
-      { nome: "Costela de Boi", preco: 90.0 },
-      { nome: "Lagarto Maluco", preco: 92.0 },
-      { nome: "Lombo a Mineira", preco: 84.0 },
-      { nome: "Lombo c/ Abacaxi", preco: 88.0 },
-      { nome: "Costelinha de Porco", preco: 82.0 },
-      { nome: "File de Tilapia", preco: 96.0 },
+      { nome: "PARMEGIANA DE FRANGO", preco: 86.0 },
+      { nome: "FILE DE FRANGO C/ CHAMPIGNON", preco: 90.0 },
+      { nome: "PARMEGIANA DE BOI", preco: 98.0 },
+      { nome: "CONTRA FILE C/ FRITAS", preco: 92.0 },
+      { nome: "FILE MIGNON C/ FRITAS", preco: 118.0 },
+      { nome: "FILE MIGNON AO MOLHO MADEIRA", preco: 112.0 },
+      { nome: "COSTELA DE BOI", preco: 90.0 },
+      { nome: "LAGARTO MALUCO", preco: 92.0 },
+      { nome: "LOMBO A MINEIRA", preco: 84.0 },
+      { nome: "LOMBO C/ ABACAXI", preco: 88.0 },
+      { nome: "COSTELINHA DE PORCO", preco: 82.0 },
+      { nome: "FILE DE TILAPIA", preco: 96.0 },
     ];
 
     ordem = 1;
     for (const p of PRATOS_A_LA_CARTE) {
       const itemId = await ensureItem({
         nome: p.nome,
-        categoria_id: categoriaMap["Pratos a la carte"],
-        ingredientes: [],
+        categoria_id: categoriaMap["PRATOS A LA CARTE"],
+        aceita_meia_porcao: 1,
       });
       await ensureItemCardapio({
         cardapio_id: fdsId,
@@ -224,161 +236,91 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       });
     }
 
-    const MASSAS_FDS = ["Penne", "Espaguete", "Talharim"];
-    ordem = 1;
-    for (const tipo of MASSAS_FDS) {
-      const itemId = await ensureItem({
-        nome: tipo,
-        categoria_id: categoriaMap["Massas FDS"],
-        ingredientes: ["Massa"],
-      });
-      await ensureItemCardapio({
-        cardapio_id: fdsId,
-        item_id: itemId,
-        preco: 29.9,
-        ordem: ordem++,
-      });
-    }
-
-    const PRATOS_LIGHTS = [
-      { nome: "Omelete Braseiro", preco: 23.9 },
-      { nome: "Salada de Frango c/ Abacaxi", preco: 24.9 },
-    ];
-    ordem = 1;
-    for (const p of PRATOS_LIGHTS) {
-      const itemId = await ensureItem({
-        nome: p.nome,
-        categoria_id: categoriaMap["Pratos Lights"],
-        ingredientes: [],
-      });
-      await ensureItemCardapio({
-        cardapio_id: fdsId,
-        item_id: itemId,
-        preco: p.preco,
-        ordem: ordem++,
-      });
-    }
-
-    const PRATOS_KIDS = [
-      { nome: "Kids Frango", preco: 24.9 },
-      { nome: "Kids Ovo", preco: 21.9 },
-      { nome: "Kids Massa", preco: 21.9 },
-    ];
-    ordem = 1;
-    for (const p of PRATOS_KIDS) {
-      const itemId = await ensureItem({
-        nome: p.nome,
-        categoria_id: categoriaMap["Pratos Kids"],
-        ingredientes: ["Arroz", "Feijao", "Fritas"],
-      });
-      await ensureItemCardapio({
-        cardapio_id: fdsId,
-        item_id: itemId,
-        preco: p.preco,
-        ordem: ordem++,
-      });
-    }
-
-    const SOBREMESAS = [
-      { nome: "Pudim", preco: 8.0 },
-      { nome: "Romeu e Julieta", preco: 8.0 },
-      { nome: "Doce de Leite c/ Queijo", preco: 8.0 },
-    ];
-    ordem = 1;
-    for (const s of SOBREMESAS) {
-      const itemId = await ensureItem({
-        nome: s.nome,
-        categoria_id: categoriaMap["Sobremesas"],
-      });
-      await ensureItemCardapio({
-        cardapio_id: fdsId,
-        item_id: itemId,
-        preco: s.preco,
-        ordem: ordem++,
-      });
-    }
-// ---------------------------------
-    // PETISCOS — SEMANA e FDS
     // ---------------------------------
-    const PETISCOS = [
-{ nome: 'Torresmo Tira 100g', preco: 8.00 },
-{ nome: 'Bolinho de Bacalhau (12 unidades)', preco: 39.00 },
-{ nome: 'Bolinho de Bacalhau Meia (6 unidades)', preco: 23.40 },
-{ nome: 'Camarao Empanado (12 unidades)', preco: 39.00 },
-{ nome: 'Camarao Empanado Meia (6 unidades)', preco: 23.40 },
-{ nome: 'Contra File com Fritas', preco: 49.00 },
-{ nome: 'Contra File com Fritas Meia', preco: 29.40 },
-{ nome: 'Fritas Porcao', preco: 28.00 },
-{ nome: 'Fritas Porcao Meia', preco: 16.80 },
-{ nome: 'Fritas com Linguica', preco: 34.00 },
-{ nome: 'Fritas com Linguica Meia', preco: 20.40 },
-{ nome: 'Figado com Jilo', preco: 32.00 },
-{ nome: 'Figado com Jilo Meia', preco: 19.20 },
-{ nome: 'Moelinha', preco: 34.00 },
-{ nome: 'Moelinha Meia', preco: 20.40 },
-{ nome: 'Lingua de Boi ao Molho de Vinho', preco: 32.00 },
-{ nome: 'Lingua de Boi ao Molho de Vinho Meia', preco: 19.20 },
-{ nome: 'Isca de Tilapia', preco: 49.00 },
-{ nome: 'Isca de Tilapia Meia', preco: 29.40 },
-{ nome: 'Pastel Queijo (12 unidades)', preco: 24.00 },
-{ nome: 'Pastel Queijo Meia (6 unidades)', preco: 14.40 },
-{ nome: 'Camarao Alho e Oleo', preco: 39.00 },
-{ nome: 'Camarao Alho e Oleo Meia', preco: 23.40 },
-{ nome: 'Provolone na Pedra', preco: 31.00 },
-{ nome: 'Provolone na Pedra Meia', preco: 18.60 }, { nome: 'Feijao Amigo Pequeno', preco: 6.00 },
-{ nome: 'Provolone na Pedra Meia', preco: 18.60 },
-{ nome: 'Feijao Amigo Pequeno', preco: 6.00 },
-{ nome: 'Trio Mineiro', preco: 49.00 },
+// MASSAS — SEMANA
+// ---------------------------------
+const MASSAS_SEMANA = [
+  { nome: "PENNE", preco: 24.9 },
+  { nome: "ESPAGUETE", preco: 24.9 },
+  { nome: "TALHARIM", preco: 24.9 },
 ];
 
-    ordem = 1;
-    for (const p of PETISCOS) {
-      const itemId = await ensureItem({
-        nome: p.nome,
-        categoria_id: categoriaMap["Petiscos"],
-        ingredientes: [],
-      });
+ordem = 1;
+for (const m of MASSAS_SEMANA) {
+  const itemId = await ensureItem({
+    nome: m.nome,
+    categoria_id: categoriaMap["MASSAS"],
+    ingredientes: ["MASSA"],
+  });
 
-      // adiciona ao cardápio da semana
-      await ensureItemCardapio({
-        cardapio_id: semanaId,
-        item_id: itemId,
-        preco: p.preco,
-        ordem: ordem,
-      });
+  await ensureItemCardapio({
+    cardapio_id: semanaId,
+    item_id: itemId,
+    preco: m.preco,
+    ordem: ordem++,
+  });
+}
 
-      // adiciona também ao cardápio do fim de semana
-      await ensureItemCardapio({
-        cardapio_id: fdsId,
-        item_id: itemId,
-        preco: p.preco,
-        ordem: ordem++,
-      });
-    }
+// ---------------------------------
+// MASSAS — FDS
+// ---------------------------------
+const MASSAS_FDS = [
+  { nome: "PENNE", preco: 29.9 },
+  { nome: "ESPAGUETE", preco: 29.9 },
+  { nome: "TALHARIM", preco: 29.9 },
+];
+
+ordem = 1;
+for (const m of MASSAS_FDS) {
+  const itemId = await ensureItem({
+    nome: m.nome,
+    categoria_id: categoriaMap["MASSAS FDS"],
+    ingredientes: ["MASSA"],
+  });
+
+  await ensureItemCardapio({
+    cardapio_id: fdsId,
+    item_id: itemId,
+    preco: m.preco,
+    ordem: ordem++,
+  });
+}
+
     // ---------------------------------
-    // PETISCOS — SEMANA e FDS
+    // PETISCOS — ACEITAM MEIA PORÇÃO CONFORME LISTA
     // ---------------------------------
-    const PETISCOS_SEMANA_FDS = [
-{ nome: 'Torresmo Tira 100g', preco: 8.00 }, { nome: 'Bolinho de Bacalhau (12 unidades)', preco: 39.00 }, { nome: 'Bolinho de Bacalhau Meia (6 unidades)', preco: 23.40 }, { nome: 'Camarao Empanado (12 unidades)', preco: 39.00 }, { nome: 'Camarao Empanado Meia (6 unidades)', preco: 23.40 }, { nome: 'Contra File com Fritas', preco: 49.00 }, { nome: 'Contra File com Fritas Meia', preco: 29.40 }, { nome: 'Fritas Porcao', preco: 28.00 }, { nome: 'Fritas Porcao Meia', preco: 16.80 }, { nome: 'Fritas com Linguica', preco: 34.00 }, { nome: 'Fritas com Linguica Meia', preco: 20.40 }, { nome: 'Figado com Jilo', preco: 32.00 }, { nome: 'Figado com Jilo Meia', preco: 19.20 }, { nome: 'Moelinha', preco: 34.00 }, { nome: 'Moelinha Meia', preco: 20.40 }, { nome: 'Lingua de Boi ao Molho de Vinho', preco: 32.00 }, { nome: 'Lingua de Boi ao Molho de Vinho Meia', preco: 19.20 }, { nome: 'Isca de Tilapia', preco: 49.00 }, { nome: 'Isca de Tilapia Meia', preco: 29.40 }, { nome: 'Pastel Queijo (12 unidades)', preco: 24.00 }, { nome: 'Pastel Queijo Meia (6 unidades)', preco: 14.40 }, { nome: 'Camarao Alho e Oleo', preco: 39.00 }, { nome: 'Camarao Alho e Oleo Meia', preco: 23.40 }, { nome: 'Provolone na Pedra', preco: 31.00 }, { nome: 'Provolone na Pedra Meia', preco: 18.60 }, { nome: 'Feijao Amigo Pequeno', preco: 6.00 },
+    const PETISCOS = [
+      { nome: "BOLINHO DE BACALHAU", preco: 39.0, meia: 1 },
+      { nome: "CAMARAO EMPANADO", preco: 39.0, meia: 1 },
+      { nome: "EMPADA", preco: 9.0, meia: 0 },
+      { nome: "MOELINHA", preco: 34.0, meia: 1 },
+      { nome: "TORRESMO 100G", preco: 8.49, meia: 0 },
+      { nome: "FRITAS", preco: 28.0, meia: 1 },
+      { nome: "CONTRA FILE COM FRITAS", preco: 49.0, meia: 1 },
+      { nome: "FRITAS COM LINGUICA", preco: 34.0, meia: 1 },
+      { nome: "FIGADO COM JILO", preco: 32.0, meia: 1 },
+      { nome: "LINGUA DE BOI AO MOLHO DE VINHO", preco: 32.0, meia: 1 },
+      { nome: "TRIO MINEIRO", preco: 49.0, meia: 1 },
+      { nome: "ISCA DE TILAPIA", preco: 49.0, meia: 1 },
+      { nome: "CAMARAO ALHO E OLEO", preco: 39.0, meia: 1 },
+      { nome: "PASTEL QUEIJO", preco: 24.0, meia: 1 },
+      { nome: "PROVOLONE NA PEDRA", preco: 31.0, meia: 1 },
+      { nome: "FEIJAO AMIGO", preco: 6.0, meia: 0 },
     ];
 
     ordem = 1;
     for (const p of PETISCOS) {
       const itemId = await ensureItem({
         nome: p.nome,
-        categoria_id: categoriaMap["Petiscos"],
-        ingredientes: [],
+        categoria_id: categoriaMap["PETISCOS"],
+        aceita_meia_porcao: p.meia,
       });
-
-      // adiciona ao cardápio da semana
       await ensureItemCardapio({
         cardapio_id: semanaId,
         item_id: itemId,
         preco: p.preco,
-        ordem: ordem,
+        ordem,
       });
-
-      // adiciona também ao cardápio do fim de semana
       await ensureItemCardapio({
         cardapio_id: fdsId,
         item_id: itemId,
@@ -387,10 +329,50 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       });
     }
 
-    console.log("✅ Seed aplicado com sucesso!");
+    // ---------------------------------
+    // ADICIONAIS
+    // ---------------------------------
+    const ADICIONAIS = [
+      { nome: "OVO FRITO", preco: 3.0 },
+      { nome: "OMELETE SIMPLES", preco: 12.0, ingredientes: ["2 OVOS"] },
+      { nome: "OMELETE", preco: 15.0, ingredientes: ["QUEIJO", "CEBOLA", "TOMATE", "3 OVOS"] },
+      { nome: "FRITAS ADICIONAL", preco: 10.0 },
+      { nome: "BIFE FRANGO GRELHADO", preco: 13.90 },
+      { nome: "BIFE FRANGO A MILANESA", preco: 15.90 },
+      { nome: "BIFE FRANGO A PARMEGIANA", preco: 17.90 },
+      { nome: "BIFE DE PORCO GRELHADO", preco: 13.90 },
+      { nome: "BIFE DE BOI GRELHADO", preco: 15.90 },
+      { nome: "BIFE DE BOI A MILANESA", preco: 17.90 },
+      { nome: "BIFE DE BOI A PARMEGIANA", preco: 19.90 },
+      { nome: "BIFE DE TILAPIA GRELHADA", preco: 15.90 },
+      { nome: "BIFE DE FIGADO", preco: 13.90 },
+    ];
+
+    ordem = 1;
+    for (const a of ADICIONAIS) {
+      const itemId = await ensureItem({
+        nome: a.nome,
+        categoria_id: categoriaMap["ADICIONAIS"],
+        ingredientes: a.ingredientes || [],
+      });
+      await ensureItemCardapio({
+        cardapio_id: semanaId,
+        item_id: itemId,
+        preco: a.preco,
+        ordem: ordem++,
+      });
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: a.preco,
+        ordem,
+      });
+    }
+
+    console.log("✅ SEED APLICADO COM SUCESSO (TODOS EM MAIÚSCULO)");
   } catch (err) {
-    console.error("❌ Erro durante seed:", err);
+    console.error("❌ ERRO DURANTE SEED:", err);
   } finally {
-    db.close(() => console.log("🔒 Conexão encerrada."));
+    db.close(() => console.log("🔒 CONEXÃO ENCERRADA."));
   }
 })();

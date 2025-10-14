@@ -119,55 +119,71 @@ class PrinterService {
     return String(text).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
   }
 
-  formatarPedido(pedido) {
-    const linhas = [];
-    const add = (linha) => {
-      // só adiciona a linha (sem inserir linha em branco automaticamente)
-      linhas.push(this.sanitizeForPrint(linha));
-    };
-    const blank = () => linhas.push('');
+formatarPedido(pedido) {
+  const linhas = [];
+  const add = (linha) => {
+    linhas.push(this.sanitizeForPrint(linha));
+  };
+  const blank = () => linhas.push('');
 
-    add('==== PEDIDO RECEBIDO ====');
-    add(`Pedido N: ${pedido.id}`);
-    add(`Data:${new Date().toLocaleString('pt-BR')}`);
+  add('==== PEDIDO RECEBIDO ====');
+  add(`Pedido N: ${pedido.id}`);
+  add(`Data: ${new Date().toLocaleString('pt-BR')}`);
+  add('-------------------------');
+  add(`Mesa: ${pedido.mesa}`);
+
+  // percorre todos os itens do pedido
+  (pedido.itens || []).forEach(item => {
     add('-------------------------');
-    add(`Mesa: ${pedido.mesa}`);
+    const nome = (item.nome || 'ITEM').toUpperCase();
+    const qtd = item.quantidade || 1;
 
-    // imprime CADA unidade separadamente (mesmo que quantidade > 1)
-    (pedido.itens || []).forEach(item => {
-      add('-------------------------');
-      const nome = item.nome || 'Item';
-      const qtd = item.quantidade || 1;
+    for (let i = 0; i < qtd; i++) {
+      // 🧩 Usa o nome da categoria vinda do banco
+      let prefixo = '';
+      const categoria = (item.categoria_nome || '').toUpperCase();
 
-      for (let i = 0; i < qtd; i++) {
-        add(` > ${nome}`);
+      if (categoria.includes('PETISCO')) prefixo = 'PETISCO: ';
+      else if (categoria.includes('A LA CARTE')) prefixo = 'A LA CARTE: ';
 
-        // adicionais
-        (item.adicionar || []).forEach(ad => add(`   + Adc ${this.sanitizeForPrint(ad)}`));
+      // imprime a linha do item principal
+      add(`${prefixo}`)
+      add(` > ${nome}${item.meia ? ' (MEIA)' : ''}`);
 
-        // retirados
-        (item.retirar || []).forEach(rt => add(`   - Sem ${this.sanitizeForPrint(rt)}`));
+      // adicionais
+      (item.adicionar || []).forEach(ad =>
+        add(`   + ADC ${this.sanitizeForPrint(ad)}`)
+      );
 
-        // observacao do item (se houver, pode ter multiplas linhas)
-        if (item.observacao && item.observacao.trim()) {
-          item.observacao.split(/\r?\n/).forEach(linha => add(`   Obs: ${this.sanitizeForPrint(linha)}`));
-        }
+      // retirados
+      (item.retirar || []).forEach(rt =>
+        add(`   - SEM ${this.sanitizeForPrint(rt)}`)
+      );
 
-        blank(); // separa visualmente itens iguais
+      // observações específicas do item
+      if (item.observacao && item.observacao.trim()) {
+        item.observacao
+          .split(/\r?\n/)
+          .forEach(linha => add(`   OBS: ${this.sanitizeForPrint(linha)}`));
       }
-    });
 
-    if (pedido.observacoes && pedido.observacoes.trim()) {
-      add('-------------------------');
-      add('Obs Gerais:');
-      pedido.observacoes.split(/\r?\n/).forEach(linha => add(this.sanitizeForPrint(linha)));
-      blank();
+      blank(); // espaço entre unidades
     }
+  });
 
-    add('=========================');
-    return linhas.join(os.EOL.repeat(2)); // 2 quebras = 1 linha em branco entre cada
-
+  if (pedido.observacoes && pedido.observacoes.trim()) {
+    add('-------------------------');
+    add('OBS GERAIS:');
+    pedido.observacoes
+      .split(/\r?\n/)
+      .forEach(linha => add(this.sanitizeForPrint(linha)));
+    blank();
   }
+
+  add('=========================');
+  return linhas.join(os.EOL.repeat(2)); // quebra dupla de linha
+}
+
 
 
   async imprimirTexto(texto) {

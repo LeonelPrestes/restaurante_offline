@@ -97,47 +97,48 @@ function setupEventListeners() {
                 return;
             }
 
-            // 🔍 Procura o item dentro de todos os grupos
-            let item = null;
+            // 🔍 Busca o grupo e o item
+            let item = null, grupoDoItem = null;
             for (const grupo of menuItems) {
                 const encontrado = grupo.itens.find(i => i.id === itemId);
                 if (encontrado) {
                     item = encontrado;
+                    grupoDoItem = grupo;
                     break;
                 }
             }
+            if (!item) return console.warn(`⚠️ Item ID ${itemId} não encontrado.`);
 
-            if (!item) {
-                console.warn(`⚠️ Item ID ${itemId} não encontrado ao adicionar.`);
-                return;
-            }
-
-            const customization = currentCustomizationByItem[itemId] || {
-                adicionar: [],
-                retirar: [],
-                observacao: ''
-            };
+            const customization = currentCustomizationByItem[itemId] || {};
             customization.observacao = observacao;
 
-            // ✅ Chama a função global corrigida
+            // 🚨 MASSAS: obrigar escolha de molho
+            if (grupoDoItem && (grupoDoItem.categoria === 'MASSAS' || grupoDoItem.categoria === 'MASSAS FDS')) {
+                if (!customization.molho) {
+                    alert('Por favor, selecione um molho antes de adicionar o prato.');
+                    return;
+                }
+                // adiciona o molho na observação pra aparecer na impressão
+                customization.observacao = (observacao ? observacao + ' | ' : '') + `MOLHO: ${customization.molho}`;
+            }
+
+            // ✅ Adiciona ao pedido
             addToPedidoWithCustomization(
                 item.id,
                 customization.observacao,
-                customization.adicionar,
-                customization.retirar
+                customization.adicionar || [],
+                customization.retirar || []
             );
 
-            // 🔄 Limpa e fecha modal
+            // 🔄 Fecha e limpa modal
             delete currentCustomizationByItem[itemId];
             if (textarea) textarea.value = '';
             const custArea = modal.querySelector('#customizationArea');
             if (custArea) custArea.innerHTML = '';
             modal.style.display = 'none';
             modal.dataset.itemId = '';
-
             renderPedido();
         });
-
     }
 
 
@@ -153,9 +154,6 @@ function setupEventListeners() {
     });
 }
 
-// -----------------------------
-// Selecionar mesa / limpar mesa
-// -----------------------------
 function selectMesa(numeroMesa) {
     mesaSelecionada = numeroMesa;
 
@@ -177,17 +175,24 @@ function selectMesa(numeroMesa) {
     if (menuSection) menuSection.style.display = 'block';
     if (pedidoSection) pedidoSection.style.display = 'block';
 
+    // 🧭 Rola suavemente até o cardápio
     if (menuSection) {
-  const headerOffset = 100; // ajuste conforme a altura real do seu cabeçalho em pixels
-  const elementPosition = menuSection.getBoundingClientRect().top;
-  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        const headerOffset = 100;
+        const elementPosition = menuSection.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
-  window.scrollTo({
-    top: offsetPosition,
-    behavior: 'smooth'
-  });
+        window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+        });
+    }
+
+    // 🥘 Define automaticamente a categoria "PRATOS"
+    categoriaAtiva = 'PRATOS';
+    renderMenuCategories();
+    renderMenuItems();
 }
-}
+
 
 function clearMesa() {
     mesaSelecionada = null;
@@ -240,7 +245,7 @@ async function loadMenuItems() {
 
 function buildExtrasList() {
     // itens base solicitados
-    const baseExtras = ['Ovo', 'Omelete', 'Omelete Simples', 'Fritas', 'Bife Frango Grelhado', 'Bife Frango a Milanesa', 'Bife Frango a Parmegiana', 'Bife Porco Grelhado', 'Bife Boi Grelhado', 'Bife Boi a Milanesa', 'Bife Boi a Parmegiana', 'Bife Tilapia Grelhada', 'Bife Figado'];
+    const baseExtras = [ ...menuItems.filter(g => g.categoria === 'ADICIONAIS').flatMap(g => g.itens.map(i => i.nome))];
     extrasGlobal = baseExtras;
 }
 
@@ -296,21 +301,20 @@ function renderMenuItems() {
 }
 
 
-// -----------------------------
-// Modal: abrir para um item (agora com Retirar / Adicionar)
-// -----------------------------
 function openItemModal(itemId) {
     const modal = document.getElementById('modalObservacao');
     modal.querySelectorAll('.option-btn.option-selected')
         .forEach(btn => btn.classList.remove('option-selected'));
     const textarea = document.getElementById('textoObservacao');
 
-    // 🔍 Agora procura o item dentro de todos os grupos (novo formato agrupado)
+    // 🔍 Procura o item e o grupo (categoria)
     let item = null;
+    let grupoDoItem = null;
     for (const grupo of menuItems) {
         const encontrado = grupo.itens.find(i => i.id === itemId);
         if (encontrado) {
             item = encontrado;
+            grupoDoItem = grupo;
             break;
         }
     }
@@ -320,24 +324,19 @@ function openItemModal(itemId) {
         return;
     }
 
-    if (!modal) {
-        // fallback (mantém compatibilidade)
-        addToPedidoWithCustomization(itemId, '', [], []);
-        return;
-    }
-
-    // 🔄 Inicia sempre limpo (não herda adicionais antigos)
+    // 🔄 Inicializa estado
     currentCustomizationByItem[itemId] = {
         adicionar: [],
         retirar: [],
-        observacao: ''
+        observacao: '',
+        meia: false,
+        precoAtual: item.preco
     };
 
-    // 📦 Armazena o ID no modal (para o botão “Adicionar” saber qual item salvar)
     modal.style.display = 'flex';
     modal.dataset.itemId = String(itemId);
 
-    // 🧹 Limpa ou cria a área de customização
+    // 🧹 Cria/limpa área de customização
     let custArea = modal.querySelector('#customizationArea');
     if (!custArea) {
         custArea = document.createElement('div');
@@ -347,15 +346,85 @@ function openItemModal(itemId) {
         modalContent.insertBefore(custArea, textareaEl);
     }
 
-    // 🧠 Renderiza a área de customização (sem aplicar seleções antigas)
     renderCustomizationArea(item, custArea, true);
 
-    // ✍️ Limpa o campo de observação
-    if (textarea) {
-        textarea.value = '';
-    }
-}
+    // ==============================
+    // 🧩 CASO: PETISCOS → dois botões
+    // ==============================
+    if (grupoDoItem && grupoDoItem.categoria.toUpperCase().includes('PETISCOS')) {
+        const porcaoDiv = document.createElement('div');
+        porcaoDiv.className = 'molho-container'; // reaproveita estilo visual
+        porcaoDiv.innerHTML = `
+          <p style="margin-bottom:4px;font-weight:500;">Escolha o tipo de porção:</p>
+          <div class="molho-buttons" style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn-porcao" data-tipo="INTEIRA">INTEIRA</button>
+              <button class="btn-porcao" data-tipo="MEIA">MEIA</button>
+          </div>
+          <div style="margin-top:6px;font-weight:600;">
+              <span id="precoAtual">R$ ${item.preco.toFixed(2).replace('.', ',')}</span>
+          </div>
+      `;
+        custArea.prepend(porcaoDiv);
 
+        const btns = porcaoDiv.querySelectorAll('.btn-porcao');
+        const precoEl = porcaoDiv.querySelector('#precoAtual');
+        const cur = currentCustomizationByItem[itemId];
+
+        // por padrão já seleciona INTEIRA
+        btns[0].classList.add('ativa');
+        cur.meia = false;
+        cur.precoAtual = item.preco;
+
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                btns.forEach(b => b.classList.remove('ativa'));
+                btn.classList.add('ativa');
+                const tipo = btn.dataset.tipo;
+                if (tipo === 'MEIA') {
+                    cur.meia = true;
+                    cur.precoAtual = item.preco * 0.6;
+                } else {
+                    cur.meia = false;
+                    cur.precoAtual = item.preco;
+                }
+                precoEl.textContent = `R$ ${cur.precoAtual.toFixed(2).replace('.', ',')}`;
+            });
+        });
+    }
+
+    // ==============================
+    // 🧩 CASO: MASSAS → seleção de molhos
+    // ==============================
+    if (grupoDoItem && (grupoDoItem.categoria === 'MASSAS' || grupoDoItem.categoria === 'MASSAS FDS')) {
+        const molhosSemana = ['AO SUGO', 'BOLONHESA'];
+        const molhosFDS = ['AO SUGO', 'BOLONHESA', 'BRANCO'];
+        const molhos = (grupoDoItem.categoria === 'MASSAS FDS') ? molhosFDS : molhosSemana;
+
+        const molhoDiv = document.createElement('div');
+        molhoDiv.className = 'molho-container';
+        molhoDiv.innerHTML = `
+          <p style="margin-bottom:4px;font-weight:500;">Escolha o molho:</p>
+          <div class="molho-buttons" style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${molhos.map(m => `
+                  <button class="btn-molho" data-molho="${m}">${m}</button>
+              `).join('')}
+          </div>
+      `;
+        custArea.prepend(molhoDiv);
+
+        const molhoBtns = molhoDiv.querySelectorAll('.btn-molho');
+        molhoBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cur = currentCustomizationByItem[itemId];
+                cur.molho = btn.dataset.molho;
+                molhoBtns.forEach(b => b.classList.remove('ativa'));
+                btn.classList.add('ativa');
+            });
+        });
+    }
+
+    if (textarea) textarea.value = '';
+}
 
 
 // renderiza a UI interna do modal para customização
@@ -384,7 +453,7 @@ function renderCustomizationArea(item, container, showAlready = false) {
           <div class="options-grid" data-acc="retirar-options">
             ${retirarOptions.map(opt => `<button class="option-btn" data-type="retirar" data-opt="${escapeHtml(opt)}" onclick="toggleCustomizationOption(${itemId}, 'retirar', '${escapeJs(opt)}')">${escapeHtml(opt)}</button>`).join('')}
           </div>
-          <div class="selected-list"><strong>Selecionados:</strong> <span id="selectedRetirar"></span></div>
+
         </div>
 
         <button class="accordion-btn" type="button" data-acc="adicionar" style="width:100%;">Adicionar extras ▾</button>
@@ -392,7 +461,6 @@ function renderCustomizationArea(item, container, showAlready = false) {
           <div class="options-grid" data-acc="adicionar-options">
             ${adicionarOptions.map(opt => `<button class="option-btn" data-type="adicionar" data-opt="${escapeHtml(opt)}" onclick="toggleCustomizationOption(${itemId}, 'adicionar', '${escapeJs(opt)}')">${escapeHtml(opt)}</button>`).join('')}
           </div>
-          <div class="selected-list"><strong>Selecionados:</strong> <span id="selectedAdicionar"></span></div>
         </div>
       </div>
     `;
@@ -454,50 +522,52 @@ function addToPedido(itemId) {
 }
 
 function addToPedidoWithCustomization(itemId, observacao, adicionar = [], retirar = []) {
-  let item = null;
-  for (const grupo of menuItems) {
-    const encontrado = grupo.itens.find(i => i.id === itemId);
-    if (encontrado) {
-      item = encontrado;
-      break;
+    let item = null;
+    for (const grupo of menuItems) {
+        const encontrado = grupo.itens.find(i => i.id === itemId);
+        if (encontrado) {
+            item = encontrado;
+            break;
+        }
     }
-  }
+    if (!item) return console.warn(`⚠️ Item ID ${itemId} não encontrado em menuItems`);
 
-  if (!item) {
-    console.warn(`⚠️ Item ID ${itemId} não encontrado em menuItems`);
-    return;
-  }
+    const cur = currentCustomizationByItem[itemId] || {};
+    const meia = !!cur.meia;
+    const precoFinal = meia ? (item.preco * 0.6) : item.preco;
 
-  const norm = (arr = []) => [...new Set(arr.map(s => String(s).trim()).filter(Boolean))];
-  const addNorm = norm(adicionar);
-  const retNorm = norm(retirar);
-  const obsNorm = (observacao || '').trim();
+    const norm = (arr = []) => [...new Set(arr.map(s => String(s).trim()).filter(Boolean))];
+    const addNorm = norm(adicionar);
+    const retNorm = norm(retirar);
+    const obsNorm = (observacao || '').trim();
 
-  const existingItem = pedidoAtual.find(p =>
-    p.id === item.id &&
-    (p.observacao || '') === obsNorm &&
-    arraysEqual(p.adicionar || [], addNorm) &&
-    arraysEqual(p.retirar || [], retNorm)
-  );
+    const existingItem = pedidoAtual.find(p =>
+        p.id === item.id &&
+        (p.observacao || '') === obsNorm &&
+        arraysEqual(p.adicionar || [], addNorm) &&
+        arraysEqual(p.retirar || [], retNorm) &&
+        !!p.meia === meia
+    );
 
-  if (existingItem) {
-    existingItem.quantidade++;
-  } else {
-    pedidoAtual.push({
-      uid: generateUid(),
-      id: item.id,
-      nome: item.nome,
-      preco: item.preco,
-      quantidade: 1,
-      observacao: obsNorm,
-      adicionar: addNorm,
-      retirar: retNorm
-    });
-  }
+    if (existingItem) {
+        existingItem.quantidade++;
+    } else {
+        pedidoAtual.push({
+            uid: generateUid(),
+            id: item.id,
+            nome: item.nome,
+            preco: precoFinal,
+            quantidade: 1,
+            observacao: obsNorm,
+            adicionar: addNorm,
+            retirar: retNorm,
+            meia
+        });
+    }
 
-  console.log("✅ Item adicionado ao pedido:", item.nome, addNorm, retNorm, obsNorm);
-  renderPedido();
+    renderPedido();
 }
+
 
 
 
@@ -532,7 +602,7 @@ function renderPedido() {
         const obsHtml = item.observacao ? ` — <small style="color:#718096;">Obs: ${escapeHtml(item.observacao)}</small>` : '';
         return `<div class="pedido-item">
             <div class="pedido-item-info">
-                <div class="pedido-item-name">${item.nome}${obsHtml}</div>
+                <div class="pedido-item-name">${item.nome}${item.meia ? ' (MEIA)' : ''}${obsHtml}</div>
                 ${retirarHtml}
                 ${adicionarHtml}
                 <div class="pedido-item-price">R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
