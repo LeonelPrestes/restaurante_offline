@@ -93,24 +93,17 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
   );
 }
 
-/* =========================================================
-   EXECUÇÃO PRINCIPAL
-   ========================================================= */
+
 (async () => {
   try {
-    // ---------------------------------
-    // CARDÁPIOS
-    // ---------------------------------
     const semanaId = await ensureCardapio("SEMANA", "semana", "1,2,3,4,5");
     const fdsId = await ensureCardapio("FDS", "fds", "6,0");
 
-    // ---------------------------------
-    // CATEGORIAS
-    // ---------------------------------
     const categorias = [
-      "PRATOS",
+      "PRATOS EXECUTIVOS",
       "MASSAS",
       "PETISCOS",
+      "PETISCOS FDS",
       "ADICIONAIS",
       "BEBIDAS",
       "SOBREMESAS",
@@ -126,18 +119,12 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       categoriaMap[nome] = await ensureCategoria(nome);
     }
 
-    // ---------------------------------
-    // VARIANTES (MOLHOS)
-    // ---------------------------------
     const varMolho = await ensureVariante("MOLHO", 1);
     const molhos = ["AO SUGO", "BOLONHESA", "BRANCO"];
     for (let i = 0; i < molhos.length; i++) {
       await ensureVarianteOpcao(varMolho, molhos[i], i + 1);
     }
 
-    // ---------------------------------
-    // ITENS — SEMANA
-    // ---------------------------------
     const BASE_PRATO = [
       "ARROZ",
       "FEIJAO",
@@ -149,7 +136,13 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       "PROTEINA",
     ];
 
-    const PRATOS = [
+    /*
+    /////////////////// CARDÁPIO SEMANAL ////////////////
+    */
+
+    // PRATOS EXECUTIVOS SEMANA
+
+    const PRATOS_EXECUTIVOS = [
       { nome: "PRATO DO DIA", preco: 22.9 },
       { nome: "FEIJOADA", preco: 24.9 },
       { nome: "EXEC FRANGO GRELHADO", preco: 24.9 },
@@ -164,10 +157,10 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
     ];
 
     let ordem = 1;
-    for (const p of PRATOS) {
+    for (const p of PRATOS_EXECUTIVOS) {
       const itemId = await ensureItem({
         nome: p.nome,
-        categoria_id: categoriaMap["PRATOS"],
+        categoria_id: categoriaMap["PRATOS EXECUTIVOS"],
         ingredientes: BASE_PRATO,
       });
       await ensureItemCardapio({
@@ -178,160 +171,34 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       });
     }
 
-    // ---------------------------------
-    // ITENS — FDS
-    // ---------------------------------
-    const PRATOS_FDS = [
-      { nome: "EXECUTIVO DE FRANGO", preco: 29.9 },
-      { nome: "EXECUTIVO DE PORCO", preco: 29.9 },
-      { nome: "EXECUTIVO DE BOI", preco: 37.9 },
-      { nome: "EXECUTIVO DE PEIXE", preco: 35.9 },
+    /*
+    MASSAS SEMANA
+    */
+
+    const MASSAS_SEMANA = [
+      { nome: "PENNE", preco: 24.9 },
+      { nome: "TALHARIM", preco: 24.9 },
+      { nome: "ESPAGUETE", preco: 24.9 },
     ];
 
     ordem = 1;
-    for (const p of PRATOS_FDS) {
+    for (const m of MASSAS_SEMANA) {
       const itemId = await ensureItem({
-        nome: p.nome,
-        categoria_id: categoriaMap["PRATOS FDS"],
-        ingredientes: ["ARROZ", "FRITAS", "ALFACE", "TOMATE"],
+        nome: m.nome,
+        categoria_id: categoriaMap["MASSAS"],
+        ingredientes: ["MASSA"],
       });
-      await ensureItemCardapio({
-        cardapio_id: fdsId,
-        item_id: itemId,
-        preco: p.preco,
-        ordem: ordem++,
-      });
-    }
 
-    // ---------------------------------
-    // PRATOS A LA CARTE — TODOS ACEITAM MEIA PORÇÃO
-    // ---------------------------------
-    const PRATOS_A_LA_CARTE = [
-      { nome: "PARMEGIANA DE FRANGO", preco: 86.0 },
-      { nome: "FILE DE FRANGO C/ CHAMPIGNON", preco: 90.0 },
-      { nome: "PARMEGIANA DE BOI", preco: 98.0 },
-      { nome: "CONTRA FILE C/ FRITAS", preco: 92.0 },
-      { nome: "FILE MIGNON C/ FRITAS", preco: 118.0 },
-      { nome: "FILE MIGNON AO MOLHO MADEIRA", preco: 112.0 },
-      { nome: "COSTELA DE BOI", preco: 90.0 },
-      { nome: "LAGARTO MALUCO", preco: 92.0 },
-      { nome: "LOMBO A MINEIRA", preco: 84.0 },
-      { nome: "LOMBO C/ ABACAXI", preco: 88.0 },
-      { nome: "COSTELINHA DE PORCO", preco: 82.0 },
-      { nome: "FILE DE TILAPIA", preco: 96.0 },
-    ];
-
-    ordem = 1;
-    for (const p of PRATOS_A_LA_CARTE) {
-      const itemId = await ensureItem({
-        nome: p.nome,
-        categoria_id: categoriaMap["PRATOS A LA CARTE"],
-        aceita_meia_porcao: 1,
-      });
-      await ensureItemCardapio({
-        cardapio_id: fdsId,
-        item_id: itemId,
-        preco: p.preco,
-        ordem: ordem++,
-      });
-    }
-
-    // ---------------------------------
-// MASSAS — SEMANA
-// ---------------------------------
-const MASSAS_SEMANA = [
-  { nome: "PENNE", preco: 24.9 },
-  { nome: "ESPAGUETE", preco: 24.9 },
-  { nome: "TALHARIM", preco: 24.9 },
-];
-
-ordem = 1;
-for (const m of MASSAS_SEMANA) {
-  const itemId = await ensureItem({
-    nome: m.nome,
-    categoria_id: categoriaMap["MASSAS"],
-    ingredientes: ["MASSA"],
-  });
-
-  await ensureItemCardapio({
-    cardapio_id: semanaId,
-    item_id: itemId,
-    preco: m.preco,
-    ordem: ordem++,
-  });
-}
-
-// ---------------------------------
-// MASSAS — FDS
-// ---------------------------------
-const MASSAS_FDS = [
-  { nome: "PENNE", preco: 29.9 },
-  { nome: "ESPAGUETE", preco: 29.9 },
-  { nome: "TALHARIM", preco: 29.9 },
-];
-
-ordem = 1;
-for (const m of MASSAS_FDS) {
-  const itemId = await ensureItem({
-    nome: m.nome,
-    categoria_id: categoriaMap["MASSAS FDS"],
-    ingredientes: ["MASSA"],
-  });
-
-  await ensureItemCardapio({
-    cardapio_id: fdsId,
-    item_id: itemId,
-    preco: m.preco,
-    ordem: ordem++,
-  });
-}
-
-    // ---------------------------------
-    // PETISCOS — ACEITAM MEIA PORÇÃO CONFORME LISTA
-    // ---------------------------------
-    const PETISCOS = [
-      { nome: "BOLINHO DE BACALHAU", preco: 39.0, meia: 1 },
-      { nome: "CAMARAO EMPANADO", preco: 39.0, meia: 1 },
-      { nome: "EMPADA", preco: 9.0, meia: 0 },
-      { nome: "MOELINHA", preco: 34.0, meia: 1 },
-      { nome: "TORRESMO 100G", preco: 8.49, meia: 0 },
-      { nome: "FRITAS", preco: 28.0, meia: 1 },
-      { nome: "CONTRA FILE COM FRITAS", preco: 49.0, meia: 1 },
-      { nome: "FRITAS COM LINGUICA", preco: 34.0, meia: 1 },
-      { nome: "FIGADO COM JILO", preco: 32.0, meia: 1 },
-      { nome: "LINGUA DE BOI AO MOLHO DE VINHO", preco: 32.0, meia: 1 },
-      { nome: "TRIO MINEIRO", preco: 49.0, meia: 1 },
-      { nome: "ISCA DE TILAPIA", preco: 49.0, meia: 1 },
-      { nome: "CAMARAO ALHO E OLEO", preco: 39.0, meia: 1 },
-      { nome: "PASTEL QUEIJO", preco: 24.0, meia: 1 },
-      { nome: "PROVOLONE NA PEDRA", preco: 31.0, meia: 1 },
-      { nome: "FEIJAO AMIGO", preco: 6.0, meia: 0 },
-    ];
-
-    ordem = 1;
-    for (const p of PETISCOS) {
-      const itemId = await ensureItem({
-        nome: p.nome,
-        categoria_id: categoriaMap["PETISCOS"],
-        aceita_meia_porcao: p.meia,
-      });
       await ensureItemCardapio({
         cardapio_id: semanaId,
         item_id: itemId,
-        preco: p.preco,
-        ordem,
-      });
-      await ensureItemCardapio({
-        cardapio_id: fdsId,
-        item_id: itemId,
-        preco: p.preco,
+        preco: m.preco,
         ordem: ordem++,
       });
     }
 
-    // ---------------------------------
-    // ADICIONAIS
-    // ---------------------------------
+    /* ADICIONAIS SEMANA */
+
     const ADICIONAIS = [
       { nome: "OVO FRITO", preco: 3.0 },
       { nome: "OMELETE SIMPLES", preco: 12.0, ingredientes: ["2 OVOS"] },
@@ -365,7 +232,235 @@ for (const m of MASSAS_FDS) {
         cardapio_id: fdsId,
         item_id: itemId,
         preco: a.preco,
+        ordem: ordem++,
+      });
+    }
+
+    /* PETISCOS SEMANA */
+
+    const PETISCOS = [
+      { nome: "EMPADA", preco: 9.0, meia: 0 },
+      { nome: "TORRESMO 100G", preco: 8.49, meia: 0 },
+      { nome: "BOLINHO DE BACALHAU", preco: 39.0, meia: 1 },
+      { nome: "CAMARAO EMPANADO", preco: 39.0, meia: 1 },
+      { nome: "CONTRA FILE COM FRITAS", preco: 49.0, meia: 1 },
+      { nome: "FRITAS", preco: 28.0, meia: 1 },
+      { nome: "FRITAS COM LINGUICA", preco: 34.0, meia: 1 },
+      { nome: "FIGADO COM JILO", preco: 32.0, meia: 1 },
+      { nome: "MOELINHA", preco: 34.0, meia: 1 },
+      { nome: "LINGUA DE BOI AO MOLHO DE VINHO", preco: 32.0, meia: 1 },
+      { nome: "ISCA DE TILAPIA", preco: 49.0, meia: 1 },
+      { nome: "PASTEL QUEIJO", preco: 24.0, meia: 1 },
+      { nome: "CAMARAO ALHO E OLEO", preco: 39.0, meia: 1 },
+      { nome: "PROVOLONE NA PEDRA", preco: 31.0, meia: 1 },
+      { nome: "FEIJAO AMIGO", preco: 6.0, meia: 0 },
+      { nome: "TRUPICO", preco: 15.0, meia: 1 },
+    ];
+
+    ordem = 1;
+    for (const p of PETISCOS) {
+      const itemId = await ensureItem({
+        nome: p.nome,
+        categoria_id: categoriaMap["PETISCOS"],
+        aceita_meia_porcao: p.meia,
+      });
+      await ensureItemCardapio({
+        cardapio_id: semanaId,
+        item_id: itemId,
+        preco: p.preco,
         ordem,
+      });
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: p.preco,
+        ordem: ordem++,
+      });
+    }
+
+    /*
+    ///////////////// CARDÁPIO FDS ///////////////// 
+    */
+
+   /* PRATOS A LA CARTE FDS */
+
+    const PRATOS_A_LA_CARTE = [
+      { nome: "PARMEGIANA DE FRANGO", preco: 86.0 },
+      { nome: "FILE DE FRANGO C/ CHAMPIGNON", preco: 90.0 },
+      { nome: "PARMEGIANA DE BOI", preco: 98.0 },
+      { nome: "CONTRA FILE C/ FRITAS", preco: 92.0 },
+      { nome: "FILE MIGNON C/ FRITAS", preco: 116.0 },
+      { nome: "FILE MIGNON AO MOLHO MADEIRA", preco: 112.0 },
+      { nome: "COSTELA DE BOI", preco: 90.0 },
+      { nome: "LAGARTO MALUCO", preco: 92.0 },
+      { nome: "LOMBO A MINEIRA", preco: 84.0 },
+      { nome: "LOMBO C/ ABACAXI", preco: 88.0 },
+      { nome: "COSTELINHA DE PORCO", preco: 82.0 },
+      { nome: "FILE DE TILAPIA", preco: 96.0 },
+    ];
+
+    ordem = 1;
+    for (const p of PRATOS_A_LA_CARTE) {
+      const itemId = await ensureItem({
+        nome: p.nome,
+        categoria_id: categoriaMap["PRATOS A LA CARTE"],
+        aceita_meia_porcao: 1,
+      });
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: p.preco,
+        ordem: ordem++,
+      });
+    }
+
+    /* PRATOS FDS */
+
+    const PRATOS_FDS = [
+      { nome: "EXECUTIVO DE FRANGO", preco: 29.9 },
+      { nome: "EXECUTIVO DE PORCO", preco: 29.9 },
+      { nome: "EXECUTIVO DE BOI", preco: 37.9 },
+      { nome: "EXECUTIVO DE PEIXE", preco: 35.9 },
+    ];
+
+    ordem = 1;
+    for (const p of PRATOS_FDS) {
+      const itemId = await ensureItem({
+        nome: p.nome,
+        categoria_id: categoriaMap["PRATOS FDS"],
+        ingredientes: ["ARROZ", "FRITAS", "ALFACE", "TOMATE"],
+      });
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: p.preco,
+        ordem: ordem++,
+      });
+    }
+
+    /* PRATOS LIGHTS FDS*/
+
+    const PRATOS_LIGHTS = [
+      { nome: "OMELETE BRASEIRO", preco: 23.9 },
+      { nome: "SALADA DE FRANGO C/ ABACAXI", preco: 24.9 },
+    ];
+
+    ordem = 1;
+    for (const p of PRATOS_LIGHTS) {
+      const itemId = await ensureItem({
+        nome: p.nome,
+        categoria_id: categoriaMap["PRATOS LIGHTS"],
+      });
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: p.preco,
+        ordem: ordem++,
+      });
+    }
+
+    /* PRATOS KIDS */
+
+    const PRATOS_KIDS = [
+      { nome: "KIDS FRANGO", preco: 24.90 },
+      { nome: "KIDS OVO", preco: 21.90 },
+      { nome: "KIDS MASSA", preco: 21.90 },
+    ];
+    ordem = 1;
+    for (const p of PRATOS_KIDS) {
+      const itemId = await ensureItem({
+        nome: p.nome,
+        categoria_id: categoriaMap["PRATOS KIDS"],
+      });
+
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: p.preco,
+        ordem: ordem++,
+      });
+    }
+
+    /* MASSAS FDS */
+
+    const MASSAS_FDS = [
+      { nome: "PENNE", preco: 29.9 },
+      { nome: "ESPAGUETE", preco: 29.9 },
+      { nome: "TALHARIM", preco: 29.9 },
+    ];
+
+    ordem = 1;
+    for (const m of MASSAS_FDS) {
+      const itemId = await ensureItem({
+        nome: m.nome,
+        categoria_id: categoriaMap["MASSAS FDS"],
+        ingredientes: ["MASSA"],
+      });
+
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: m.preco,
+        ordem: ordem++,
+      });
+    }
+
+    /* SOBREMESAS FDS */
+
+    const SOBREMESAS_FDS = [
+      { nome: "PUDIM", preco: 8.0 },
+      { nome: "ROMEU E JULIETA", preco: 8.0 },
+      { nome: "DOCE DE LEITE C/ QUEIJO", preco: 8.0 },
+    ];
+    ordem = 1;
+    for (const s of SOBREMESAS_FDS) {
+      const itemId = await ensureItem({
+        nome: s.nome,
+        categoria_id: categoriaMap["SOBREMESAS"],
+      });
+
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: s.preco,
+        ordem: ordem++,
+      });
+    }
+
+    /* PETISCOS FDS */
+
+    const PETISCOS_FDS = [
+      { nome: "BOLINHO DE BACALHAU", preco: 39.0, meia: 1 },
+      { nome: "CAMARAO EMPANADO", preco: 39.0, meia: 1 },
+      { nome: "EMPADA", preco: 9.0, meia: 0 },
+      { nome: "MOELINHA", preco: 34.0, meia: 1 },
+      { nome: "TORRESMO 100G", preco: 8.49, meia: 0 },
+      { nome: "FRITAS", preco: 28.0, meia: 1 },
+      { nome: "CONTRA FILE COM FRITAS", preco: 55.0, meia: 1 },
+      { nome: "FRITAS COM LINGUICA", preco: 34.0, meia: 1 },
+      { nome: "FIGADO COM JILO", preco: 32.0, meia: 1 },
+      { nome: "LINGUA DE BOI AO MOLHO DE VINHO", preco: 31.0, meia: 1 },
+      { nome: "TRIO MINEIRO", preco: 49.0, meia: 1 },
+      { nome: "ISCA DE TILAPIA", preco: 49.0, meia: 1 },
+      { nome: "CAMARAO ALHO E OLEO", preco: 39.0, meia: 1 },
+      { nome: "PASTEL QUEIJO", preco: 24.0, meia: 1 },
+      { nome: "PROVOLONE NA PEDRA", preco: 27.0, meia: 1 },
+      { nome: "FEIJAO AMIGO", preco: 6.0, meia: 0 },
+      { nome: "TRUPICO", preco: 15.0, meia: 1 },
+    ];
+
+    ordem = 1;
+    for (const p of PETISCOS_FDS) {
+      const itemId = await ensureItem({
+        nome: p.nome,
+        categoria_id: categoriaMap["PETISCOS FDS"],
+        aceita_meia_porcao: p.meia,
+      });
+      await ensureItemCardapio({
+        cardapio_id: fdsId,
+        item_id: itemId,
+        preco: p.preco,
+        ordem: ordem++,
       });
     }
 
