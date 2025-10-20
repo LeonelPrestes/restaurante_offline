@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
@@ -252,7 +253,7 @@ async function startServer() {
 
     server.listen(PORT, "0.0.0.0", () => {
       console.log(`Servidor rodando na porta ${PORT}`);
-      console.log(`Acesse: http://localhost:${PORT}`);
+      console.log(`Acesse: http://${process.env.DB_HOST}:${PORT}`);
     });
   } catch (error) {
     console.error("Erro ao iniciar servidor:", error);

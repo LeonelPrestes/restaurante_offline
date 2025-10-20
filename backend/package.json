@@ -22,6 +22,7 @@
     "@serialport/list": "^13.0.0",
     "@serialport/stream": "^13.0.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "escpos": "^3.0.0-alpha.6",
     "escpos-serialport": "^3.0.0-alpha.4",
     "escpos-usb": "^3.0.0-alpha.4",
