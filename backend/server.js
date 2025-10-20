@@ -4,7 +4,7 @@ const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
 const path = require("path");
-const { db, getItens, getItemPorId, getItensPorCategoria } = require("./db");
+const { db, getItens, getItemPorId, getItensPorCategoria } = require("./config/db");
 const PrinterService = require("./printer-service");
 
 const app = express();

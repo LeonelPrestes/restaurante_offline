@@ -11,7 +11,7 @@
 
 const path = require("path");
 const sqlite3 = require("sqlite3").verbose();
-const DB_PATH = path.resolve(__dirname, "db.sqlite");
+const DB_PATH = path.resolve(__dirname, "braseiro.sqlite");
 const db = new sqlite3.Database(DB_PATH);
 
 console.log("🌱 Iniciando seed do banco de dados...");
