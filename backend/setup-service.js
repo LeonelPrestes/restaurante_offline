@@ -87,7 +87,7 @@ class PrinterService {
         `Data: ${date}\n` +
         `Hora: ${time}\n\n` +
         'Impressora: Bematech MP-4200 TH\n' +
-        'Sistema: Restaurante Offline\n\n' +
+        'Sistema: ComandAI\n\n' +
         'Status da conexão:\n' +
         '✓ Porta serial: OK\n' +
         '✓ Comunicação: OK\n' +

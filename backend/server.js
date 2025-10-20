@@ -22,47 +22,6 @@ app.use(express.static(path.join(__dirname, "../frontend")));
 const printerService = new PrinterService();
 
 /* =========================================================
-   🧱 Garantir tabelas de pedidos / itens_pedido
-   ========================================================= */
-function ensurePedidosSchema() {
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      db.run(
-        `CREATE TABLE IF NOT EXISTS pedidos (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          mesa INTEGER NOT NULL,
-          observacoes TEXT,
-          status TEXT DEFAULT 'pendente',
-          criado_em TEXT DEFAULT (datetime('now'))
-        )`,
-        (err) => {
-          if (err) return reject(err);
-        }
-      );
-
-      db.run(
-        `CREATE TABLE IF NOT EXISTS itens_pedido (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          pedido_id INTEGER NOT NULL,
-          nome TEXT NOT NULL,
-          preco REAL NOT NULL,
-          quantidade INTEGER DEFAULT 1,
-          observacao TEXT,
-          adicionar TEXT,
-          retirar TEXT,
-          meia INTEGER DEFAULT 0,
-          FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
-        )`,
-        (err) => {
-          if (err) return reject(err);
-          resolve();
-        }
-      );
-    });
-  });
-}
-
-/* =========================================================
    🔧 Helpers de banco
    ========================================================= */
 function runAsync(sql, params = []) {
@@ -288,7 +247,6 @@ const PORT = process.env.PORT || 3000;
 async function startServer() {
   try {
     console.log("🚀 Inicializando servidor...");
-    await ensurePedidosSchema();
     await printerService.conectar();
     console.log("🖨️ Impressora conectada com sucesso");
 
