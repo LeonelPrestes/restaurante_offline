@@ -46,33 +46,46 @@ async function ensureCardapio(nome, slug, dias_validos) {
   return row?.id;
 }
 
-async function ensureItem({
-  nome,
-  categoria_id,
-  ingredientes,
-  descricao,
-  aceita_meia_porcao = 0,
-}) {
-  await run(
-    `INSERT OR IGNORE INTO itens (nome, categoria_id, ingredientes, descricao, aceita_meia_porcao)
-     VALUES (?, ?, ?, ?, ?)`,
-    [nome, categoria_id, JSON.stringify(ingredientes || []), descricao || "", aceita_meia_porcao]
+async function ensureItem({ nome, categoria_id, ingredientes, descricao, sufixo = "" }) {
+  // nome técnico interno para evitar conflito entre semana e FDS
+  const nomeInterno = sufixo ? `${nome} ${sufixo}` : nome;
+
+  const existente = await get(
+    `SELECT id FROM itens WHERE nome = ? AND categoria_id = ?`,
+    [nomeInterno, categoria_id]
   );
-  const row = await get(`SELECT id FROM itens WHERE nome = ?`, [nome]);
+
+  if (existente) {
+    return existente.id;
+  }
+
+  await run(
+    `INSERT INTO itens (nome, categoria_id, ingredientes, descricao)
+     VALUES (?, ?, ?, ?)`,
+    [nomeInterno, categoria_id, JSON.stringify(ingredientes || []), descricao || ""]
+  );
+
+  const row = await get(
+    `SELECT id FROM itens WHERE nome = ? AND categoria_id = ?`,
+    [nomeInterno, categoria_id]
+  );
+
   return row?.id;
 }
+
 
 async function ensureItemCardapio({
   cardapio_id,
   item_id,
   preco,
+  preco_meia = null,
   ordem,
   ativo = 1,
 }) {
   await run(
-    `INSERT OR IGNORE INTO itens_cardapio (cardapio_id, item_id, preco, ordem, ativo)
-     VALUES (?, ?, ?, ?, ?)`,
-    [cardapio_id, item_id, preco, ordem, ativo]
+    `INSERT OR REPLACE INTO itens_cardapio (cardapio_id, item_id, preco, preco_meia, ordem, ativo)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [cardapio_id, item_id, preco, preco_meia, ordem, ativo]
   );
 }
 
@@ -228,33 +241,27 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
         preco: a.preco,
         ordem: ordem++,
       });
-      await ensureItemCardapio({
-        cardapio_id: fdsId,
-        item_id: itemId,
-        preco: a.preco,
-        ordem: ordem++,
-      });
     }
 
     /* PETISCOS SEMANA */
 
     const PETISCOS = [
-      { nome: "EMPADA", preco: 9.0, meia: 0 },
-      { nome: "TORRESMO 100G", preco: 8.49, meia: 0 },
-      { nome: "BOLINHO DE BACALHAU", preco: 39.0, meia: 1 },
-      { nome: "CAMARAO EMPANADO", preco: 39.0, meia: 1 },
-      { nome: "CONTRA FILE COM FRITAS", preco: 49.0, meia: 1 },
-      { nome: "FRITAS", preco: 28.0, meia: 1 },
-      { nome: "FRITAS COM LINGUICA", preco: 34.0, meia: 1 },
-      { nome: "FIGADO COM JILO", preco: 32.0, meia: 1 },
-      { nome: "MOELINHA", preco: 34.0, meia: 1 },
-      { nome: "LINGUA DE BOI AO MOLHO DE VINHO", preco: 32.0, meia: 1 },
-      { nome: "ISCA DE TILAPIA", preco: 49.0, meia: 1 },
-      { nome: "PASTEL QUEIJO", preco: 24.0, meia: 1 },
-      { nome: "CAMARAO ALHO E OLEO", preco: 39.0, meia: 1 },
-      { nome: "PROVOLONE NA PEDRA", preco: 31.0, meia: 1 },
-      { nome: "FEIJAO AMIGO", preco: 6.0, meia: 0 },
-      { nome: "TRUPICO", preco: 15.0, meia: 1 },
+      { nome: "EMPADA", preco: 9.0, },
+      { nome: "TORRESMO 100G", preco: 8.49, },
+      { nome: "BOLINHO DE BACALHAU", preco: 39.0, preco_meia: 23.90 },
+      { nome: "CAMARAO EMPANADO", preco: 39.0, preco_meia: 23.90 },
+      { nome: "CONTRA FILE COM FRITAS", preco: 49.0, preco_meia: 29.90 },
+      { nome: "FRITAS", preco: 28.0, preco_meia: 16.80 },
+      { nome: "FRITAS COM LINGUICA", preco: 34.0, preco_meia: 20.40 },
+      { nome: "FIGADO COM JILO", preco: 32.0, preco_meia: 19.20 },
+      { nome: "MOELINHA", preco: 34.0, preco_meia: 20.40 },
+      { nome: "LINGUA DE BOI AO MOLHO DE VINHO", preco: 32.0, preco_meia: 19.20 },
+      { nome: "ISCA DE TILAPIA", preco: 49.0, preco_meia: 29.90 },
+      { nome: "PASTEL QUEIJO", preco: 24.0, preco_meia: 14.40 },
+      { nome: "CAMARAO ALHO E OLEO", preco: 39.0, preco_meia: 23.90 },
+      { nome: "PROVOLONE NA PEDRA", preco: 31.0, preco_meia: 18.60 },
+      { nome: "FEIJAO AMIGO", preco: 6.0, },
+      { nome: "TRUPICO", preco: 15.0, preco_meia: 9.0 },
     ];
 
     ordem = 1;
@@ -262,18 +269,13 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       const itemId = await ensureItem({
         nome: p.nome,
         categoria_id: categoriaMap["PETISCOS"],
-        aceita_meia_porcao: p.meia,
+        sufixo: "[SEMANA]"
       });
       await ensureItemCardapio({
         cardapio_id: semanaId,
         item_id: itemId,
         preco: p.preco,
-        ordem,
-      });
-      await ensureItemCardapio({
-        cardapio_id: fdsId,
-        item_id: itemId,
-        preco: p.preco,
+        preco_meia: p.preco_meia,
         ordem: ordem++,
       });
     }
@@ -282,21 +284,21 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
     ///////////////// CARDÁPIO FDS ///////////////// 
     */
 
-   /* PRATOS A LA CARTE FDS */
+    /* PRATOS A LA CARTE FDS */
 
     const PRATOS_A_LA_CARTE = [
-      { nome: "PARMEGIANA DE FRANGO", preco: 86.0 },
-      { nome: "FILE DE FRANGO C/ CHAMPIGNON", preco: 90.0 },
-      { nome: "PARMEGIANA DE BOI", preco: 98.0 },
-      { nome: "CONTRA FILE C/ FRITAS", preco: 92.0 },
-      { nome: "FILE MIGNON C/ FRITAS", preco: 116.0 },
-      { nome: "FILE MIGNON AO MOLHO MADEIRA", preco: 112.0 },
-      { nome: "COSTELA DE BOI", preco: 90.0 },
-      { nome: "LAGARTO MALUCO", preco: 92.0 },
-      { nome: "LOMBO A MINEIRA", preco: 84.0 },
-      { nome: "LOMBO C/ ABACAXI", preco: 88.0 },
-      { nome: "COSTELINHA DE PORCO", preco: 82.0 },
-      { nome: "FILE DE TILAPIA", preco: 96.0 },
+      { nome: "PARMEGIANA DE FRANGO", preco: 86.0, preco_meia: 51.60 },
+      { nome: "FILE DE FRANGO C/ CHAMPIGNON", preco: 90.0, preco_meia: 54.00 },
+      { nome: "PARMEGIANA DE BOI", preco: 98.0, preco_meia: 58.80 },
+      { nome: "CONTRA FILE C/ FRITAS", preco: 92.0, preco_meia: 55.20 },
+      { nome: "FILE MIGNON C/ FRITAS", preco: 116.0, preco_meia: 69.60 },
+      { nome: "FILE MIGNON AO MOLHO MADEIRA", preco: 112.0, preco_meia: 67.20 },
+      { nome: "COSTELA DE BOI", preco: 90.0, preco_meia: 54.00 },
+      { nome: "LAGARTO MALUCO", preco: 92.0, preco_meia: 55.20 },
+      { nome: "LOMBO A MINEIRA", preco: 84.0, preco_meia: 50.40 },
+      { nome: "LOMBO C/ ABACAXI", preco: 88.0, preco_meia: 52.80 },
+      { nome: "COSTELINHA DE PORCO", preco: 82.0, preco_meia: 49.20 },
+      { nome: "FILE DE TILAPIA", preco: 96.0, preco_meia: 57.60 },
     ];
 
     ordem = 1;
@@ -304,12 +306,12 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       const itemId = await ensureItem({
         nome: p.nome,
         categoria_id: categoriaMap["PRATOS A LA CARTE"],
-        aceita_meia_porcao: 1,
       });
       await ensureItemCardapio({
         cardapio_id: fdsId,
         item_id: itemId,
         preco: p.preco,
+        preco_meia: p.preco_meia,
         ordem: ordem++,
       });
     }
@@ -430,23 +432,23 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
     /* PETISCOS FDS */
 
     const PETISCOS_FDS = [
-      { nome: "BOLINHO DE BACALHAU", preco: 39.0, meia: 1 },
-      { nome: "CAMARAO EMPANADO", preco: 39.0, meia: 1 },
-      { nome: "EMPADA", preco: 9.0, meia: 0 },
-      { nome: "MOELINHA", preco: 34.0, meia: 1 },
-      { nome: "TORRESMO 100G", preco: 8.49, meia: 0 },
-      { nome: "FRITAS", preco: 28.0, meia: 1 },
-      { nome: "CONTRA FILE COM FRITAS", preco: 55.0, meia: 1 },
-      { nome: "FRITAS COM LINGUICA", preco: 34.0, meia: 1 },
-      { nome: "FIGADO COM JILO", preco: 32.0, meia: 1 },
-      { nome: "LINGUA DE BOI AO MOLHO DE VINHO", preco: 31.0, meia: 1 },
-      { nome: "TRIO MINEIRO", preco: 49.0, meia: 1 },
-      { nome: "ISCA DE TILAPIA", preco: 49.0, meia: 1 },
-      { nome: "CAMARAO ALHO E OLEO", preco: 39.0, meia: 1 },
-      { nome: "PASTEL QUEIJO", preco: 24.0, meia: 1 },
-      { nome: "PROVOLONE NA PEDRA", preco: 27.0, meia: 1 },
-      { nome: "FEIJAO AMIGO", preco: 6.0, meia: 0 },
-      { nome: "TRUPICO", preco: 15.0, meia: 1 },
+      { nome: "BOLINHO DE BACALHAU", preco: 39.0, preco_meia: 23.40 },
+      { nome: "CAMARAO EMPANADO", preco: 39.0, preco_meia: 23.40 },
+      { nome: "EMPADA", preco: 9.0 },
+      { nome: "MOELINHA", preco: 34.0, preco_meia: 20.40 },
+      { nome: "TORRESMO 100G", preco: 8.49 },
+      { nome: "FRITAS", preco: 28.0, preco_meia: 16.80 },
+      { nome: "CONTRA FILE COM FRITAS", preco: 55.0, preco_meia: 33.00 },
+      { nome: "FRITAS COM LINGUICA", preco: 34.0, preco_meia: 20.40 },
+      { nome: "FIGADO COM JILO", preco: 32.0, preco_meia: 19.20 },
+      { nome: "LINGUA DE BOI AO MOLHO DE VINHO", preco: 31.0, preco_meia: 18.60 },
+      { nome: "TRIO MINEIRO", preco: 49.0, preco_meia: 29.40 },
+      { nome: "ISCA DE TILAPIA", preco: 49.0, preco_meia: 29.40 },
+      { nome: "CAMARAO ALHO E OLEO", preco: 39.0, preco_meia: 23.40 },
+      { nome: "PASTEL QUEIJO", preco: 24.0, preco_meia: 14.40 },
+      { nome: "PROVOLONE NA PEDRA", preco: 27.0, preco_meia: 16.20 },
+      { nome: "FEIJAO AMIGO", preco: 6.0 },
+      { nome: "TRUPICO", preco: 15.0, preco_meia: 9.00 },
     ];
 
     ordem = 1;
@@ -454,12 +456,13 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       const itemId = await ensureItem({
         nome: p.nome,
         categoria_id: categoriaMap["PETISCOS FDS"],
-        aceita_meia_porcao: p.meia,
+        sufixo: "[FDS]"
       });
       await ensureItemCardapio({
         cardapio_id: fdsId,
         item_id: itemId,
         preco: p.preco,
+        preco_meia: p.preco_meia,
         ordem: ordem++,
       });
     }

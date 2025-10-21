@@ -11,17 +11,32 @@ exports.criarPedidoDB = async ({ mesa, itens, observacoes }) => {
 
     for (const it of itens) {
       const nome = it.nome || "ITEM";
-      const precoOriginal = Number(it.preco || 0);
       const meia = it.meia ? 1 : 0;
-      const preco = meia ? precoOriginal * 0.6 : precoOriginal; // 🔹 regra de 60%
       const quantidade = parseInt(it.quantidade || 1, 10);
       const observacao = it.observacao || "";
       const adicionar = Array.isArray(it.adicionar) ? it.adicionar : [];
       const retirar = Array.isArray(it.retirar) ? it.retirar : [];
 
+      // 🔍 Busca o preço correto do item no banco (preco e preco_meia)
+      const row = await getAsync(`
+    SELECT ic.preco, ic.preco_meia
+    FROM itens_cardapio ic
+    JOIN itens i ON i.id = ic.item_id
+    WHERE i.nome = ? 
+    LIMIT 1;
+  `, [nome]);
+
+      let preco = 0;
+      if (row) {
+        preco = meia && row.preco_meia != null ? row.preco_meia : row.preco;
+      } else {
+        // fallback caso o item não esteja em itens_cardapio (usa preço vindo do front)
+        preco = Number(it.preco || 0);
+      }
+
       await runAsync(
         `INSERT INTO itens_pedido (pedido_id, nome, preco, quantidade, observacao, adicionar, retirar, meia)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           pedidoId,
           nome,

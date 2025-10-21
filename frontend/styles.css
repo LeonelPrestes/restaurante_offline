@@ -603,6 +603,15 @@ button.btn-porcao.ativa {
     justify-content: space-between;
   }
 
+  .menu-item-price {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #48bb78;
+}
+
   .pedido-item {
     flex-direction: column;
     align-items: flex-start;
