@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS categorias (
 
 CREATE TABLE IF NOT EXISTS itens (
   id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-  nome                TEXT NOT NULL UNIQUE,
+  nome                TEXT NOT NULL,
   categoria_id        INTEGER NOT NULL,
   ingredientes        TEXT,
   descricao           TEXT,
@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS itens_cardapio (
   cardapio_id  INTEGER NOT NULL,
   item_id      INTEGER NOT NULL,
   preco        REAL NOT NULL CHECK (preco >= 0),
+  preco_meia   REAL CHECK (preco_meia >= 0),
   ordem        INTEGER DEFAULT 999,
   ativo        INTEGER DEFAULT 1 CHECK (ativo IN (0,1)),
   criado_em    TEXT DEFAULT (datetime('now', 'localtime')),

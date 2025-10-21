@@ -1,7 +1,7 @@
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 
-const dbPath = path.resolve(__dirname, "db.sqlite");
+const dbPath = path.resolve(__dirname, "../db/braseiro/braseiro.sqlite");
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) console.error("❌ Erro ao conectar ao SQLite:", err.message);
   else console.log("✅ Banco conectado:", dbPath);
@@ -48,7 +48,10 @@ async function getCardapioId(parametro = null) {
 async function getItens(parametroCardapio = null) {
   const cardapioId = await getCardapioId(parametroCardapio);
 
-  const sql = `
+  // Detecta se é fim de semana (sábado ou domingo)
+  const isFds = parametroCardapio === 'fds' || isFimDeSemana();
+
+  let sql = `
     SELECT 
       c.nome AS categoria,
       i.id,
@@ -56,12 +59,25 @@ async function getItens(parametroCardapio = null) {
       ic.preco,
       i.ingredientes,
       ic.ordem,
-      i.aceita_meia_porcao
+      ic.preco_meia
     FROM itens_cardapio ic
     JOIN itens i ON ic.item_id = i.id
     JOIN categorias c ON i.categoria_id = c.id
     WHERE ic.cardapio_id = ?
       AND ic.ativo = 1
+  `;
+
+  // 🚫 Quando for FDS → ignorar qualquer categoria "PETISCOS" que NÃO contenha "FDS"
+  if (isFds) {
+    sql += `
+      AND NOT (
+        UPPER(c.nome) LIKE 'PETISCOS'
+        OR (UPPER(c.nome) LIKE '%PETISCOS%' AND UPPER(c.nome) NOT LIKE '%FDS%')
+      )
+    `;
+  }
+
+  sql += `
     ORDER BY c.nome, ic.ordem, i.nome;
   `;
 
@@ -79,15 +95,17 @@ async function getItens(parametroCardapio = null) {
 
     grupoAtual.itens.push({
       id: row.id,
-      nome: row.nome,
+      nome: limparNome(row.nome),
       preco: row.preco,
-      aceita_meia_porcao: !!row.aceita_meia_porcao,
+      preco_meia: row.preco_meia,
+      aceita_meia_porcao: row.preco_meia != null,
       ingredientes: JSON.parse(row.ingredientes || "[]"),
     });
   }
 
   return agrupado;
 }
+
 
 /* =========================================================
    🔍 getItemPorId() → Detalhe de item específico
@@ -101,7 +119,6 @@ async function getItemPorId(id, parametroCardapio = null) {
       i.nome,
       i.ingredientes,
       i.descricao,
-      i.aceita_meia_porcao,
       c.nome AS categoria,
       ic.preco,
       ic.ordem
@@ -116,7 +133,7 @@ async function getItemPorId(id, parametroCardapio = null) {
 
   return {
     id: row.id,
-    nome: row.nome,
+    nome: limparNome(row.nome),
     preco: row.preco,
     categoria: row.categoria,
     aceita_meia_porcao: !!row.aceita_meia_porcao,
@@ -152,12 +169,16 @@ async function getItensPorCategoria(categoria, parametroCardapio = null) {
   const rows = await allAsync(sql, [cardapioId, categoria]);
   return rows.map((r) => ({
     id: r.id,
-    nome: r.nome,
+    nome: limparNome(r.nome),
     preco: r.preco,
     categoria: r.categoria,
     aceita_meia_porcao: !!r.aceita_meia_porcao,
     ingredientes: JSON.parse(r.ingredientes || "[]"),
   }));
+}
+
+function limparNome(nome) {
+  return nome.replace(/\s*\[.*?\]$/, '').trim();
 }
 
 module.exports = { db, getItens, getItemPorId, getItensPorCategoria };

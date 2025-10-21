@@ -3,7 +3,7 @@ let socket;
 let mesaSelecionada = null;
 let menuItems = [];
 let pedidoAtual = []; // itens terão: uid, id, nome, preco, quantidade, observacao, adicionar[], retirar[]
-let categoriaAtiva = 'Pratos'; // categoria inicial
+let categoriaAtiva = 'PRATOS EXECUTIVOS';  // categoria inicial
 
 // extras globais e customização temporária por item
 let extrasGlobal = []; // array de strings (ovo, omelete, bifes, etc)
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // -----------------------------
 // Socket.IO (sem alteração)
-// -----------------------------
+// -----------------------------    
 function initializeSocket() {
     socket = io();
 
@@ -187,8 +187,8 @@ function selectMesa(numeroMesa) {
         });
     }
 
-    // 🥘 Define automaticamente a categoria "PRATOS"
-    categoriaAtiva = 'PRATOS';
+    // 🥘 Define automaticamente a categoria "PRATOS EXECUTIVOS"
+    categoriaAtiva = 'PRATOS EXECUTIVOS';
     renderMenuCategories();
     renderMenuItems();
 }
@@ -245,7 +245,7 @@ async function loadMenuItems() {
 
 function buildExtrasList() {
     // itens base solicitados
-    const baseExtras = [ ...menuItems.filter(g => g.categoria === 'ADICIONAIS').flatMap(g => g.itens.map(i => i.nome))];
+    const baseExtras = [...menuItems.filter(g => g.categoria === 'ADICIONAIS').flatMap(g => g.itens.map(i => i.nome))];
     extrasGlobal = baseExtras;
 }
 
@@ -329,7 +329,7 @@ function openItemModal(itemId) {
         adicionar: [],
         retirar: [],
         observacao: '',
-        meia: false,
+        meia_porção: item.preco_meia || null,
         precoAtual: item.preco
     };
 
@@ -351,7 +351,11 @@ function openItemModal(itemId) {
     // ==============================
     // 🧩 CASO: PETISCOS → dois botões
     // ==============================
-    if (grupoDoItem && grupoDoItem.categoria.toUpperCase().includes('PETISCOS')) {
+    if (
+        grupoDoItem &&
+        grupoDoItem.categoria.toUpperCase().includes('PETISCOS') &&
+        item.preco_meia != null
+    ) {
         const porcaoDiv = document.createElement('div');
         porcaoDiv.className = 'molho-container'; // reaproveita estilo visual
         porcaoDiv.innerHTML = `
@@ -372,7 +376,7 @@ function openItemModal(itemId) {
 
         // por padrão já seleciona INTEIRA
         btns[0].classList.add('ativa');
-        cur.meia = false;
+        cur.preco_meia = item.preco_meia || null;
         cur.precoAtual = item.preco;
 
         btns.forEach(btn => {
@@ -380,13 +384,14 @@ function openItemModal(itemId) {
                 btns.forEach(b => b.classList.remove('ativa'));
                 btn.classList.add('ativa');
                 const tipo = btn.dataset.tipo;
-                if (tipo === 'MEIA') {
-                    cur.meia = true;
-                    cur.precoAtual = item.preco * 0.6;
+                cur.tipo = tipo; // 👈 armazena o tipo de porção
+
+                if (tipo === 'MEIA' && item.preco_meia != null) {
+                    cur.precoAtual = item.preco_meia;
                 } else {
-                    cur.meia = false;
                     cur.precoAtual = item.preco;
                 }
+
                 precoEl.textContent = `R$ ${cur.precoAtual.toFixed(2).replace('.', ',')}`;
             });
         });
@@ -522,51 +527,55 @@ function addToPedido(itemId) {
 }
 
 function addToPedidoWithCustomization(itemId, observacao, adicionar = [], retirar = []) {
-    let item = null;
-    for (const grupo of menuItems) {
-        const encontrado = grupo.itens.find(i => i.id === itemId);
-        if (encontrado) {
-            item = encontrado;
-            break;
-        }
+  let item = null;
+  for (const grupo of menuItems) {
+    const encontrado = grupo.itens.find(i => i.id === itemId);
+    if (encontrado) {
+      item = encontrado;
+      break;
     }
-    if (!item) return console.warn(`⚠️ Item ID ${itemId} não encontrado em menuItems`);
+  }
+  if (!item) return console.warn(`⚠️ Item ID ${itemId} não encontrado em menuItems`);
 
-    const cur = currentCustomizationByItem[itemId] || {};
-    const meia = !!cur.meia;
-    const precoFinal = meia ? (item.preco * 0.6) : item.preco;
+  const cur = currentCustomizationByItem[itemId] || {};
+  const tipo = cur.tipo || 'INTEIRA';
+  const meia = tipo === 'MEIA';
+  const precoFinal = (meia && item.preco_meia != null) ? item.preco_meia : item.preco;
 
-    const norm = (arr = []) => [...new Set(arr.map(s => String(s).trim()).filter(Boolean))];
-    const addNorm = norm(adicionar);
-    const retNorm = norm(retirar);
-    const obsNorm = (observacao || '').trim();
+  const norm = (arr = []) => [...new Set(arr.map(s => String(s).trim()).filter(Boolean))];
+  const addNorm = norm(adicionar);
+  const retNorm = norm(retirar);
+  const obsNorm = (observacao || '').trim();
 
-    const existingItem = pedidoAtual.find(p =>
-        p.id === item.id &&
-        (p.observacao || '') === obsNorm &&
-        arraysEqual(p.adicionar || [], addNorm) &&
-        arraysEqual(p.retirar || [], retNorm) &&
-        !!p.meia === meia
-    );
+  // 🔍 Checa se já existe o mesmo item com mesmo tipo e observações
+  const existingItem = pedidoAtual.find(p =>
+    p.id === item.id &&
+    p.tipo === tipo && // 👈 garante que o tipo (INTEIRA/MEIA) é considerado
+    (p.observacao || '') === obsNorm &&
+    arraysEqual(p.adicionar || [], addNorm) &&
+    arraysEqual(p.retirar || [], retNorm)
+  );
 
-    if (existingItem) {
-        existingItem.quantidade++;
-    } else {
-        pedidoAtual.push({
-            uid: generateUid(),
-            id: item.id,
-            nome: item.nome,
-            preco: precoFinal,
-            quantidade: 1,
-            observacao: obsNorm,
-            adicionar: addNorm,
-            retirar: retNorm,
-            meia
-        });
-    }
+  if (existingItem) {
+    existingItem.quantidade++;
+  } else {
+    pedidoAtual.push({
+      uid: generateUid(),
+      id: item.id,
+      nome: item.nome,
+      preco: precoFinal,
+      quantidade: 1,
+      observacao: obsNorm,
+      adicionar: addNorm,
+      retirar: retNorm,
+      meia,
+      tipo, // 👈 agora o tipo também é salvo (INTEIRA ou MEIA)
+    });
+  }
 
-    renderPedido();
+  renderPedido();
 }
+
 
 
 
@@ -607,6 +616,7 @@ function renderPedido() {
                 ${adicionarHtml}
                 <div class="pedido-item-price">R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
             </div>
+            
             <div class="pedido-item-controls">
                 <button class="qty-btn" onclick="decreaseQuantity('${item.uid}')">-</button>
                 <span class="qty-display">${item.quantidade}</span>
