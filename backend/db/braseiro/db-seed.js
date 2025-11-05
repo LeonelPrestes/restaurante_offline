@@ -373,6 +373,7 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       const itemId = await ensureItem({
         nome: p.nome,
         categoria_id: categoriaMap["PRATOS KIDS"],
+        sufixo: "[FDS]"
       });
 
       await ensureItemCardapio({

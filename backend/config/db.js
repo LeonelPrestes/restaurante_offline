@@ -68,14 +68,20 @@ async function getItens(parametroCardapio = null) {
   `;
 
   // 🚫 Quando for FDS → ignorar qualquer categoria "PETISCOS" que NÃO contenha "FDS"
-  if (isFds) {
-    sql += `
-      AND NOT (
-        UPPER(c.nome) LIKE 'PETISCOS'
-        OR (UPPER(c.nome) LIKE '%PETISCOS%' AND UPPER(c.nome) NOT LIKE '%FDS%')
-      )
-    `;
-  }
+// 🚫 Quando for FDS → ignorar categorias da semana (sem sufixo FDS)
+if (isFds) {
+  sql += `
+    AND NOT (
+      -- ignora PETISCOS da semana
+      (UPPER(c.nome) LIKE 'PETISCOS' OR (UPPER(c.nome) LIKE '%PETISCOS%' AND UPPER(c.nome) NOT LIKE '%FDS%'))
+      -- ignora MASSAS da semana
+      OR (UPPER(c.nome) LIKE 'MASSAS' OR (UPPER(c.nome) LIKE '%MASSAS%' AND UPPER(c.nome) NOT LIKE '%FDS%'))
+      -- ignora PRATOS EXECUTIVOS (sem versão FDS)
+      OR (UPPER(c.nome) LIKE 'PRATOS EXECUTIVOS')
+    )
+  `;
+}
+
 
   sql += `
     ORDER BY c.nome, ic.ordem, i.nome;

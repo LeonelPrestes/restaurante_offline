@@ -365,6 +365,26 @@ section h2 {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+
+}
+
+.btn-modal-adicionar-cancelar{
+  font-size: 1.1rem;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#btnAdicionarObs{
+  background: linear-gradient(135deg, rgb(66, 225, 100), rgb(66, 225, 50));
+}
+
+#btnCancelarObs{
+  background: linear-gradient(135deg, rgb(225, 66, 100), rgb(225, 66, 50));
 }
 
 /* ---------- NOVO: Controle de Meia Porção ---------- */
@@ -408,7 +428,7 @@ section h2 {
   border: none;
   border-radius: 12px;
   padding: 0.5rem;
-  font-size: 1rem;
+  font-size: 1.5rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;

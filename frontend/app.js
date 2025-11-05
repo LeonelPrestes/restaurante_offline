@@ -703,6 +703,7 @@ async function enviarPedido() {
         itens: pedidoAtual,
         observacoes: observacoes
     };
+    console.log(pedidoData)
 
     showLoading(true);
 

@@ -128,7 +128,7 @@ formatarPedido(pedido) {
 
   add('==== PEDIDO RECEBIDO ====');
   add(`Pedido N: ${pedido.id}`);
-  add(`Data: ${new Date().toLocaleString('pt-BR')}`);
+  add(`Data:${new Date().toLocaleString('pt-BR')}`);
   add('-------------------------');
   add(`Mesa: ${pedido.mesa}`);
 
