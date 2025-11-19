@@ -4,6 +4,7 @@ const pedidosController = require('./pedidos.controller');
 
 router.get('/menu', pedidosController.getMenu);
 router.get('/cardapio/atual', pedidosController.getCardapioAtual);
+router.get('/item/:id', pedidosController.getItem);
 
 // Rota para criar um novo pedido
 router.post('/', pedidosController.criarPedido);

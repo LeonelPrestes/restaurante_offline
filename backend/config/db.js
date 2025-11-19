@@ -125,6 +125,7 @@ async function getItemPorId(id, parametroCardapio = null) {
       i.nome,
       i.ingredientes,
       i.descricao,
+      
       c.nome AS categoria,
       ic.preco,
       ic.ordem

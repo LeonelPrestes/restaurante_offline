@@ -1,6 +1,6 @@
 // backend/modules/pedidos/pedidos.controller.js
 const pedidosService = require('./pedidos.service');
-const { getItens } = require('../../config/db');
+const { getItens, getItemPorId } = require('../../config/db');
 
 exports.criarPedido = async (req, res) => {
   try {
@@ -38,5 +38,27 @@ exports.getCardapioAtual = async (req, res) => {
   } catch (error) {
     console.error('Erro ao determinar cardápio atual:', error);
     res.status(500).json({ error: 'Erro interno ao determinar cardápio' });
+  }
+};
+
+exports.getItem = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { cardapio } = req.query;
+
+    if (!id) {
+      return res.status(400).json({ error: "ID inválido" });
+    }
+
+    const item = await getItemPorId(id, cardapio);
+
+    if (!item) {
+      return res.status(404).json({ error: "Item não encontrado" });
+    }
+
+    res.json(item);
+  } catch (error) {
+    console.error("Erro ao buscar item:", error);
+    res.status(500).json({ error: "Erro interno ao buscar item" });
   }
 };
