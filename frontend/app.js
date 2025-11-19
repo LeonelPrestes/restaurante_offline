@@ -703,7 +703,6 @@ async function enviarPedido() {
         itens: pedidoAtual,
         observacoes: observacoes
     };
-    console.log(pedidoData)
 
     showLoading(true);
 
@@ -715,6 +714,7 @@ async function enviarPedido() {
             },
             body: JSON.stringify(pedidoData)
         });
+        console.log('Enviando pedido:', pedidoData);
 
         if (!response.ok) {
             throw new Error('Erro ao enviar pedido');

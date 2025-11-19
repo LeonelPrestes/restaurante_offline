@@ -199,7 +199,8 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
       const itemId = await ensureItem({
         nome: m.nome,
         categoria_id: categoriaMap["MASSAS"],
-        ingredientes: ["MASSA"],
+        sufixo: "[SEMANA]",
+        ingredientes: ["MASSA"]
       });
 
       await ensureItemCardapio({
@@ -398,6 +399,7 @@ async function ensureVarianteOpcao(variante_id, nome, ordem) {
         nome: m.nome,
         categoria_id: categoriaMap["MASSAS FDS"],
         ingredientes: ["MASSA"],
+        sufixo: "[FDS]"
       });
 
       await ensureItemCardapio({
