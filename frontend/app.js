@@ -218,8 +218,8 @@ async function loadMenuItems() {
     try {
         // 🔍 1. Detecta qual cardápio está ativo
         const cardapioRes = await fetch('/api/cardapio/atual');
-        const cardapioInfo = await cardapioRes.json();
-        const cardapioSlug = cardapioInfo.cardapio?.toLowerCase() || 'semana';
+        const cardapioInfo = await cardapioRes.json()
+        const cardapioSlug = cardapioInfo.cardapio?.toLowerCase() || 'semana'; 
         console.log('🧭 Cardápio ativo:', cardapioSlug);
 
         // 🥘 2. Carrega o menu correspondente

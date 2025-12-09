@@ -21,7 +21,7 @@ build/
 *.njsproj
 *.sln
 *.sw?
-
+*.sqlite
 # OS files
 .DS_Store
 Thumbs.db
